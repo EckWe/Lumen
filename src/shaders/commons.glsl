@@ -11,8 +11,9 @@ layout(binding = 1) readonly buffer InstanceInfo_ {
 };
 layout(binding = 2) uniform SceneUBOBuffer { SceneUBO ubo; };
 layout(binding = 3) buffer SceneDesc_ { SceneDesc scene_desc; };
-layout(binding = 4) uniform sampler2D scene_textures[];
-layout(binding = 5, scalar) readonly buffer Lights { Light lights[]; };
+
+layout(binding = 4, scalar) readonly buffer Lights { Light lights[]; };
+layout(binding = 5) uniform sampler2D scene_textures[];
 
 layout(set = 1, binding = 0) uniform accelerationStructureEXT tlas;
 

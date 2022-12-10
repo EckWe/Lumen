@@ -81,6 +81,7 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <memory>
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include "Framework/ThreadPool.h"

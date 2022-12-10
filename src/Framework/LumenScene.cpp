@@ -204,6 +204,9 @@ void LumenScene::load_scene(const std::string& path) {
 			prim_meshes[s].world_matrix = glm::mat4(1);
 			// TODO: Implement world transforms
 		}
+		// Get file name for initialization later
+		env_tex = root + std::string(j["environment_texture"]);
+
 		auto& bsdfs_arr = j["bsdfs"];
 		auto& lights_arr = j["lights"];
 		materials.resize(bsdfs_arr.size());

@@ -151,6 +151,15 @@ void Integrator::init() {
 			i++;
 		}
 	}
+	// Initialize environment map
+	if (lumen_scene->env_tex != "") {
+		env_map = EnvMap(lumen_scene->env_tex, instance);
+		diffuse_textures.push_back(env_map.env_tex);
+		for (int i = 0; i < env_map.importance_mip_maps.size(); i++) {
+			diffuse_textures.push_back(env_map.importance_mip_maps[i]);
+		}
+	}
+
 	// Create BLAS and TLAS
 	create_blas();
 	create_tlas();
@@ -302,5 +311,6 @@ void Integrator::destroy() {
 	for (auto& tex : diffuse_textures) {
 		tex.destroy();
 	}
+	env_map.destroy();
 	vkDestroySampler(instance->vkb.ctx.device, texture_sampler, nullptr);
 }

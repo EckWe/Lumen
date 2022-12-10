@@ -11,6 +11,7 @@
 #include "Framework/Window.h"
 #include "Framework/GltfScene.hpp"
 #include "Framework/LumenScene.h"
+#include "Framework/EnvMap.h"
 #include "shaders/commons.h"
 class Integrator {
    public:
@@ -45,6 +46,7 @@ class Integrator {
 	uint32_t total_light_triangle_cnt = 0;
 	float total_light_area = 0;
 	LumenScene* lumen_scene;
+	EnvMap env_map;
 
    private:
 	void create_blas();

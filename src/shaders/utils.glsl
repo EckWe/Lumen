@@ -383,4 +383,21 @@ float erf_inv(float x) {
     return p * x;
 }
 
+vec2 dir_to_latlong(vec3 dir) {
+
+    vec2 uv;
+	vec3 d = normalize(dir);
+	uv.x = atan(-d.z, d.x) * (1 / PI2) + 0.5f;
+	uv.y = acos(d.y) * INV_PI;
+	return uv;
+}
+
+vec3 latlong_to_dir(vec2 latlong) {
+
+    float phi = PI * (2.f * clamp(latlong.x, 0, 1) - 1.f);
+	float theta = PI * clamp(latlong.y, 0, 1);
+	vec3 dir = vec3(sin(theta) * sin(phi), cos(theta), -sin(theta) * cos(phi));
+	return normalize(dir);
+}
+
 #endif

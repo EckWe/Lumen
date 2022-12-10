@@ -187,6 +187,7 @@ void transition_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout o
 
 	auto img_barrier = image_barrier2(image, src_access_flags, dst_access_flags, old_layout, new_layout, aspect_flags,
 									  source_stage, destination_stage);
+	img_barrier.subresourceRange = subresource_range;
 	auto dependency_info = vk::dependency_info(1, &img_barrier);
 	vkCmdPipelineBarrier2(cmd, &dependency_info);
 }
@@ -379,6 +380,7 @@ VkImageCreateInfo make_img2d_ci(const VkExtent2D& size, VkFormat format, VkImage
 	ici.extent.width = size.width;
 	ici.extent.height = size.height;
 	ici.extent.depth = 1;
+	ici.tiling = VK_IMAGE_TILING_OPTIMAL;
 	ici.usage = usage | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	return ici;
 }

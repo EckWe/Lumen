@@ -64,6 +64,8 @@ class LumenScene {
 	std::vector<std::string> textures;
 	std::vector<LumenLight> lights;
 
+	std::string env_tex = "";
+
 	struct Dimensions {
 		glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());
 		glm::vec3 max = glm::vec3(std::numeric_limits<float>::min());

@@ -37,6 +37,7 @@ inline static VkImageLayout get_image_layout(VkDescriptorType type) {
 	switch (type) {
 		case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
 		case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+		case VK_DESCRIPTOR_TYPE_SAMPLER:
 			return VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL;
 		case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
 			return VK_IMAGE_LAYOUT_GENERAL;
@@ -385,17 +386,18 @@ RenderPass& RenderPass::bind(Texture2D& tex, VkSampler sampler) {
 }
 
 RenderPass& RenderPass::bind_texture_array(std::vector<Texture2D>& textures) {
-	next_binding_idx++;
+	// TODO fix multiple textures bug with next_binding_idx
+	next_binding_idx += textures.size();
 	DIRTY_CHECK(rg->recording);
 	for (auto& texture : textures) {
-		bound_resources.emplace_back(texture);
+		bound_resources.emplace_back(texture, texture.sampler);
 	}
 	descriptor_counts.push_back((uint32_t)textures.size());
 	return *this;
 }
 
 RenderPass& RenderPass::bind_buffer_array(std::vector<Buffer>& buffers) {
-	next_binding_idx++;
+	next_binding_idx += buffers.size();
 	DIRTY_CHECK(rg->recording);
 	for (auto& buffer : buffers) {
 		bound_resources.emplace_back(buffer);

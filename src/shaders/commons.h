@@ -85,7 +85,8 @@ struct PushConstantRay {
     uint do_spatiotemporal;
     uint max_angle_samples;
     float world_radius;
-    float pad;
+    //float pad;
+    int num_textures;
     int first_frame;
     mat4 probe_rotation;
 };

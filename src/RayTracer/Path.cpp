@@ -28,8 +28,10 @@ void Path::render() {
 	pc_ray.time = rand() % UINT_MAX;
 	pc_ray.max_depth = lumen_scene->config.path_length;
 	pc_ray.sky_col = lumen_scene->config.sky_col;
+	
 	pc_ray.total_light_area = total_light_area;
 	pc_ray.light_triangle_count = total_light_triangle_cnt;
+	pc_ray.num_textures = lumen_scene->textures.size();
 	instance->vkb.rg
 		->add_rt("Path", {.shaders = {{"src/shaders/integrators/path/path.rgen"},
 									  {"src/shaders/ray.rmiss"},
@@ -45,10 +47,13 @@ void Path::render() {
 			scene_ubo_buffer,
 			scene_desc_buffer,
 		})
-		.bind_texture_array(diffuse_textures)
+		
 		.bind(mesh_lights_buffer)
+
+		.bind_texture_array(diffuse_textures)
 		//.write(output_tex) // Needed if the automatic shader inference is disabled
 		.bind_tlas(instance->vkb.tlas);
+		//.bind(env_map.env_tex);
 	instance->vkb.rg->run_and_submit(cmd);
 }
 

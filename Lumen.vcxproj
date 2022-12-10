@@ -122,7 +122,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_SILENCE_CXX20_CISO646_REMOVED_WARNING;TINYEXR_USE_MINIZ;TINYEXR_USE_MINIZ;TINYEXR_USE_MINIZ</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)libs\glm;$(SolutionDir)libs\glfw\include;$(VULKAN_SDK)\Include;$(SolutionDir)libs\spdlog\include;$(SolutionDir)src;$(SolutionDir)libs\stb_image;$(SolutionDir)libs\gli;$(SolutionDir)libs\tinygltf;$(SolutionDir)libs\imgui;$(SolutionDir)libs\nvvk;$(SolutionDir)libs;C:\VulkanSDK\1.3.216.0\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)libs\glm;$(SolutionDir)libs\glfw\include;$(VULKAN_SDK)\Include;$(SolutionDir)libs\spdlog\include;$(SolutionDir)src;$(SolutionDir)libs\stb_image;$(SolutionDir)libs\gli;$(SolutionDir)libs\tinygltf;$(SolutionDir)libs\imgui;$(SolutionDir)libs\nvvk;$(SolutionDir)libs;C:\VulkanSDK\1.3.231.0\Include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>LumenPCH.h</PrecompiledHeaderFile>
@@ -194,6 +194,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Framework\EnvMap.cpp" />
     <ClCompile Include="src\Framework\EventPool.cpp" />
     <ClCompile Include="libs\glslc\file_includer.cc">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -278,6 +279,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Framework\CommonTypes.h" />
+    <ClInclude Include="src\Framework\EnvMap.h" />
     <ClInclude Include="src\Framework\EventPool.h" />
     <ClInclude Include="src\Framework\RenderGraph.h" />
     <ClInclude Include="libs\extensions_vk.hpp" />

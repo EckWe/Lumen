@@ -11,6 +11,7 @@
 
 
 void main() {
+    // TODO unused variables for biased rejection of spatial combinations
     const float max_r = 10;
     const float depth_threshold = 0.01;
     const float angle_threshold = 25 * PI / 180;
