@@ -33,17 +33,30 @@ void main() {
     if (gl_GlobalInvocationID.x >= pc_ray.size_x * pc_ray.size_y) {
         return;
     }
+
+    
+
     const uint pingpong = (pc_ray.total_frame_num % 2);
     vec3 col = vec3(0);
     col += tmp_col.d[gl_GlobalInvocationID.x];
     uint idx = gl_GlobalInvocationID.x;
     tmp_col.d[gl_GlobalInvocationID.x] = vec3(0);
     const Reservoir r =
-        spatial_reservoirs.d[offset(pingpong) + gl_GlobalInvocationID.x];
+        temp_reservoirs.d[offset(0) + gl_GlobalInvocationID.x];
+
+    /*if(coords.x == 700 && coords.y == 600 && (pc_ray.frame_num < 5)) {
+
+        debugPrintfEXT("%f, %f, %f\n", r.s.L_o.x, r.s.L_o.y, r.s.L_o.z);
+        debugPrintfEXT("%f\n", r.W);
+        debugPrintfEXT("%f\n", r.s.f);
+        debugPrintfEXT("456\n");
+    }*/
+
     if (r.W > 0) {
         const ReservoirSample s = r.s;
         const vec3 wi = normalize(s.x_s - s.x_v);
-        col += s.f * abs(dot(wi, s.n_v)) * s.L_o * r.W;
+        col += s.L_o * r.W * abs(dot(wi, s.n_v)) * s.f; // * s.f * abs(dot(wi, s.n_v)) 
+        //col += abs(dot(wi, s.n_v)) * s.L_o * r.W;
     }
     if (pc_ray.frame_num > 0) {
         float w = 1. / float(pc_ray.total_frame_num + 1);

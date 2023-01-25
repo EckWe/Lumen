@@ -1,0 +1,313 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_scalar_block_layout : enable
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_debug_printf : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : require
+#extension GL_EXT_buffer_reference2 : require
+#extension GL_EXT_shader_atomic_float : require
+
+#include "../../commons.glsl"
+layout(push_constant) uniform _PushConstantRay { PushConstantRay pc_ray; };
+
+
+layout(buffer_reference, scalar) buffer LightStates { LightState d[]; };
+layout(buffer_reference, scalar) buffer LightVertices { VCMVertex d[]; };
+layout(buffer_reference, scalar) buffer ColorStorages { vec3 d[]; };
+layout(buffer_reference, scalar) buffer LightPathCnt { uint d[]; };
+layout(buffer_reference, scalar) buffer LightSpawnReservoirs { LightSpawnReservoir d[]; }; 
+
+
+
+LightVertices vcm_lights = LightVertices(scene_desc.light_vertices_addr);
+ColorStorages tmp_col = ColorStorages(scene_desc.color_storage_addr);
+LightStates light_states = LightStates(scene_desc.light_state_addr);
+LightPathCnt light_path_cnts = LightPathCnt(scene_desc.path_cnt_addr);
+LightSpawnReservoirs light_spawn_reservoirs_temporal = LightSpawnReservoirs(scene_desc.temporal_light_origin_reservoirs_addr);
+
+
+uint screen_size = gl_LaunchSizeEXT.x * gl_LaunchSizeEXT.y;
+const uint flags = gl_RayFlagsOpaqueEXT;
+const float tmin = 0.001;
+const float tmax = 10000.0;
+#define RR_MIN_DEPTH 3
+uint pixel_idx = (gl_LaunchIDEXT.x * gl_LaunchSizeEXT.y + gl_LaunchIDEXT.y);
+uvec4 seed = init_rng(gl_LaunchIDEXT.xy, gl_LaunchSizeEXT.xy,
+                      pc_ray.total_frame_num ^ pc_ray.random_num);
+uint vcm_light_path_idx =
+    (gl_LaunchIDEXT.x * gl_LaunchSizeEXT.y + gl_LaunchIDEXT.y) *
+    (pc_ray.max_depth + 1);
+#include "../sbdpt_commons.glsl"
+
+void init_light_spawn_reservoir(out LightSpawnReservoir lsr) {
+
+    lsr.M = 0;
+    lsr.W = 0.f;
+    lsr.w_sum = 0.f;
+    LightSpawnSample s;
+    s.wi, s.pos, s.L_o = vec3(0);
+    s.pdf_pos, s.pdf_dir, s.pdf_emit, s.pdf_direct = 0.f;
+    s.light_record_flags = 0;
+    lsr.light_spawn_sample = s;
+}
+
+bool update_light_reservoir(inout LightSpawnReservoir r, inout float w_sum, in LightSpawnSample s, in float w_i) {
+    w_sum += w_i;
+    r.M++;
+    if (rand(seed) * w_sum <= w_i) {
+        r.light_spawn_sample = s;
+        return true;
+    }
+    return false;
+}
+
+
+bool generate_light_sample_and_temporal_resampling(float eta_vc, out VCMState light_state,
+                               out bool finite, in VCMState camera_state) {
+    // Sample light
+    uint light_idx;
+    uint light_triangle_idx;
+    uint light_material_idx;
+    vec2 uv_unused;
+    LightRecord light_record;
+    //vec3 wi, pos;
+    //float pdf_pos, pdf_dir, pdf_emit, pdf_direct;
+    //float cos_theta;
+
+    LightSpawnSample light_spawn_sample;
+
+    const vec3 Le = sample_light_Le(
+        seed, pc_ray.num_lights, pc_ray.light_triangle_count, light_spawn_sample.cos_theta,
+        light_record, light_spawn_sample.pos, light_spawn_sample.wi, light_spawn_sample.pdf_pos, light_spawn_sample.pdf_dir, light_spawn_sample.pdf_emit, light_spawn_sample.pdf_direct);
+
+        light_spawn_sample.light_record_flags = light_record.flags;
+    
+    
+
+    // Get light hitpos, from fill_light
+    traceRayEXT(tlas, flags, 0xFF, 0, 0, 0, light_state.pos, tmin,
+                    light_state.wi, tmax, 0);
+
+    VCMVertex light_first_hit;
+    bool generate_cam = true;
+    // No intersection found
+    if (payload.material_idx == -1) {
+        //break; 
+        generate_cam = false;
+    }
+    else {
+        vec3 wo = light_state.pos - payload.pos;
+
+        vec3 n_s = payload.n_s;
+        vec3 n_g = payload.n_g;
+        bool side = true;
+        if (dot(payload.n_g, wo) <= 0.)
+            n_g = -n_g;
+        if (dot(n_g, n_s) < 0) {
+            n_s = -n_s;
+            side = false;
+        }
+        //TODO change into length(wo)
+        float dist = length(payload.pos - light_state.pos);
+        float dist_sqr = dist * dist;
+        wo /= dist;
+        const Material mat = load_material(payload.material_idx, payload.uv);
+        const bool mat_specular =
+            (mat.bsdf_props & BSDF_SPECULAR) == BSDF_SPECULAR;
+        // Complete the missing geometry terms
+        float cos_theta_wo = abs(dot(wo, n_s));
+
+        // TODO use own reservoir struct
+        light_first_hit.wo = wo;
+        light_first_hit.n_s = n_s;
+        light_first_hit.pos = payload.pos;
+        light_first_hit.uv = payload.uv;
+        light_first_hit.material_idx = payload.material_idx;
+        light_first_hit.throughput = Le * light_spawn_sample.cos_theta;
+        light_first_hit.side = uint(side);
+        
+    }
+    
+    // Get camera first hitpos 
+    // TODO get first non specular hitpos
+    traceRayEXT(tlas, flags, 0xFF, 0, 0, 0, camera_state.pos, tmin,
+                    camera_state.wi, tmax, 0);
+
+    light_spawn_sample.L_o = vec3(0);
+
+    if (payload.material_idx == -1 || !generate_cam) { 
+        // no intersection = no need to sample light
+        
+    } else {
+        vec3 wo = camera_state.pos - payload.pos;
+        float dist = length(payload.pos - camera_state.pos);
+        float dist_sqr = dist * dist;
+        wo /= dist;
+        vec3 n_s = payload.n_s;
+        vec3 n_g = payload.n_g;
+        bool side = true;
+        if (dot(payload.n_g, wo) < 0.)
+            n_g = -n_g;
+        if (dot(n_g, n_s) < 0) {
+            n_s = -n_s;
+            side = false;
+        }
+        const Material mat = load_material(payload.material_idx, payload.uv);
+        // TODO handle specular, at the moment only test diffuse scene
+        const bool mat_specular =
+            (mat.bsdf_props & BSDF_SPECULAR) == BSDF_SPECULAR;
+        //TODO CHANGE
+        camera_state.pos = offset_ray(payload.pos, n_g);
+
+        // from connect_light_vertices
+        vec3 dir = light_first_hit.pos - payload.pos;
+        const float len = length(dir);
+        const float len_sqr = len * len;
+        dir /= len;
+        const float cos_cam = dot(n_s, dir);
+        const float cos_light = dot(light_first_hit.n_s, -dir);
+        const float G = cos_light * cos_cam / len_sqr;
+
+        if (G > 0) {
+            float cam_pdf_fwd, light_pdf_fwd, light_pdf_rev;
+            const vec3 f_cam =
+                eval_bsdf(n_s, wo, mat, 1, side, dir, cam_pdf_fwd, cos_cam);
+            const Material light_mat =
+                load_material(light_first_hit.material_idx,
+                              light_first_hit.uv);
+
+            const vec3 f_light =
+                eval_bsdf(light_first_hit.n_s,
+                          light_first_hit.wo, light_mat, 0,
+                          light_first_hit.side == 1, -dir,
+                          light_pdf_fwd, light_pdf_rev, cos_light);
+
+            if (f_light != vec3(0) && f_cam != vec3(0)) {
+                const vec3 ray_origin = offset_ray2(payload.pos, n_s);
+                any_hit_payload.hit = 1;
+                traceRayEXT(tlas,
+                            gl_RayFlagsTerminateOnFirstHitEXT |
+                                gl_RayFlagsSkipClosestHitShaderEXT,
+                            0xFF, 1, 0, 1, ray_origin, 0, dir, len - EPS, 1);
+                const bool visible = any_hit_payload.hit == 0;
+                if (visible) {
+                    light_spawn_sample.L_o = G * camera_state.throughput *
+                          light_first_hit.throughput * f_cam *
+                          f_light;
+                }
+            }
+        }
+    }
+    
+    LightSpawnReservoir lsr;
+
+    // Resample according to res luminance
+    if (pc_ray.do_spatiotemporal == 0) {
+        //init reservoir
+        init_light_spawn_reservoir(lsr);
+    } else {
+        lsr = light_spawn_reservoirs_temporal.d[pixel_idx];
+    }
+
+    //lsr = light_spawn_reservoirs_temporal.d[pixel_idx];
+
+    float sample_tf = luminance(light_spawn_sample.L_o);
+    float temporal_tf = luminance(lsr.light_spawn_sample.L_o);
+
+    float wi = light_spawn_sample.pdf_emit <= 0.f ? 0.f : sample_tf / light_spawn_sample.pdf_emit;
+    
+    float w_sum = lsr.W * lsr.M * temporal_tf;
+
+    bool reservoir_sample_changed = update_light_reservoir(lsr, w_sum, light_spawn_sample, wi);
+
+    w_sum /= lsr.M;
+
+    lsr.M = min(lsr.M, 50);
+    float current_tf = luminance(lsr.light_spawn_sample.L_o);
+
+    lsr.W = current_tf <= 0.f ? 0.f : w_sum / current_tf;
+    // TODO Tiple check this, should this be lsr.W? But seems right atm
+    // Test if 0 check needed
+    // Test more
+    lsr.light_spawn_sample.pdf_emit = lsr.W <= 0.f ? 0.f : 1.f / lsr.W;
+
+    light_spawn_reservoirs_temporal.d[pixel_idx] = lsr;
+
+    light_spawn_sample = lsr.light_spawn_sample;
+
+
+
+    //TODO make unbiased with chance and adjust PDFs
+    // chance to ignore resampling and take original sample = 10%
+    // only needed when sample does not change
+    if(!reservoir_sample_changed && rand(seed) < 0.1f) {
+        
+    }
+
+
+    if (light_spawn_sample.pdf_dir <= 0) {
+        return false; // TODO check: this should never happen?
+    }
+    
+    light_state.pos = light_spawn_sample.pos;
+    light_state.area = 1.0 / light_spawn_sample.pdf_pos;
+    light_state.wi = light_spawn_sample.wi;
+    // TODO when properly integrating do lsr_L_o * lsr.W
+    light_state.throughput = light_first_hit.throughput * lsr.W;
+    // pdf_emit was changed into 1/W here to normalize the random process
+    light_state.d_vcm = light_spawn_sample.pdf_direct / light_spawn_sample.pdf_emit;
+    
+    finite = is_light_finite(light_spawn_sample.light_record_flags);
+    if (!is_light_delta(light_spawn_sample.light_record_flags)) {
+        light_state.d_vc = (finite ? light_spawn_sample.cos_theta : 1) / light_spawn_sample.pdf_emit;
+    } else {
+        light_state.d_vc = 0;
+    }
+    light_state.d_vm = light_state.d_vc * eta_vc;
+    return true;
+}
+
+
+void main() {
+    const vec2 pixel = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+    const vec2 in_uv = pixel / vec2(gl_LaunchSizeEXT.xy);
+    vec2 d = in_uv * 2.0 - 1.0;
+    vec4 origin = ubo.inv_view * vec4(0, 0, 0, 1);
+    vec4 target = ubo.inv_projection * vec4(d.x, d.y, 1, 1);
+    vec3 direction = vec3(sample_camera(d));
+    vec4 area_int = (ubo.inv_projection * vec4(2. / gl_LaunchSizeEXT.x,
+                                               2. / gl_LaunchSizeEXT.y, 0, 1));
+    area_int /= (area_int.w);
+    const float cam_area = abs(area_int.x * area_int.y);
+    VCMState vcm_state;
+
+
+
+    VCMState camera_state;
+    // Generate camera sample
+    camera_state.wi = direction;
+    camera_state.pos = origin.xyz;
+    camera_state.throughput = vec3(1.0);
+    camera_state.n_s = vec3(-ubo.inv_view * vec4(0, 0, 1, 0));
+
+
+#define light_vtx(i) vcm_lights.d[vcm_light_path_idx + i]
+    const float radius = pc_ray.radius;
+    const float radius_sqr = radius * radius;
+    float eta_vcm = PI * radius_sqr * screen_size;
+    float eta_vc = (pc_ray.use_vc == 1) ? 1.0 / eta_vcm : 0;
+    float eta_vm = (pc_ray.use_vm == 1) ? PI * radius_sqr * screen_size : 0;
+    bool specular = false;
+    bool result;
+    bool finite;
+    
+    //generate_light_sample_and_temporal_resampling(1.f, vcm_state_test, finite_test, camera_state);
+    if (!vcm_generate_light_sample(eta_vc, vcm_state, finite)) {
+    //if(!generate_light_sample_and_temporal_resampling(eta_vc, vcm_state, finite, camera_state)) {
+        return;
+    }
+    
+    vcm_fill_light(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm);
+#undef light_vtx
+}

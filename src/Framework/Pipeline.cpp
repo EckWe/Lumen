@@ -352,7 +352,11 @@ void Pipeline::create_set_layout(const std::vector<Shader>& shaders, const std::
 
 	if (descriptor_counts.size()) {
 		int idx = 0;
-		for (uint32_t i = 0; i < 32; ++i)
+		for (uint32_t i = 0; i < 32; ++i) {
+			//if (idx == descriptor_counts.size()) {
+			//	break;
+			//}
+
 			if (binding_mask & (1 << i)) {
 				VkDescriptorSetLayoutBinding binding = {};
 				binding.binding = i;
@@ -369,6 +373,7 @@ void Pipeline::create_set_layout(const std::vector<Shader>& shaders, const std::
 				set_bindings.push_back(binding);
 				idx++;
 			}
+		}
 	}
 
 	VkDescriptorSetLayoutCreateInfo set_create_info = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
@@ -487,6 +492,10 @@ void Pipeline::create_update_template(const std::vector<Shader>& shaders,
 	size_t tlas_offset = -1;
 	size_t tlas_idx = -1;
 	for (uint32_t i = 0; i < 32; ++i) {
+		//if (idx == descriptor_counts.size()) {
+		//	break;
+		//}
+
 		if (binding_mask & (1 << i)) {
 			VkDescriptorUpdateTemplateEntry entry = {};
 			entry.dstBinding = i;

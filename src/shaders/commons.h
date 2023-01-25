@@ -114,6 +114,7 @@ struct SceneUBO {
     mat4 inv_projection;
     vec4 light_pos;
     vec4 view_pos;
+	vec4 prev_view_pos;
     mat4 prev_view;
     mat4 prev_projection;
 };
@@ -352,6 +353,7 @@ struct ReservoirSample {
     vec3 n_s;
     vec3 L_o;
     vec3 f;
+	float depth_v;
 };
 
 struct Reservoir {
@@ -460,6 +462,28 @@ struct AvgStruct {
     uint prev;
 };
 
+// Temporary unoptimized TODO change into firsthit data
+struct LightSpawnSample {
+	vec3 wi;
+    vec3 pos;
+    // light sample firsthit connection radiance to camera firsthit
+    vec3 L_o;
+	float pdf_pos;
+	float pdf_dir;
+	float pdf_emit;
+    float pdf_direct;
+    float cos_theta;
+    uint light_record_flags;
+};
+
+
+struct LightSpawnReservoir {
+	uint M;
+	float W;
+	float w_sum;
+    LightSpawnSample light_spawn_sample;
+};
+
 
 
 // Scene buffer addresses
@@ -534,6 +558,10 @@ struct SceneDesc {
     uint64_t probe_dir_depth_addr;
     uint64_t direct_lighting_addr;
     uint64_t probe_offsets_addr;
+    // SBDPT
+	uint64_t light_vertices_addr;
+	uint64_t temporal_light_origin_reservoirs_addr;
+	uint64_t test_addr;
 };
 
 struct Desc2 {

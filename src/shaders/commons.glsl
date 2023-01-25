@@ -184,6 +184,9 @@ vec3 eval_albedo(const Material m) {
 /*
     Light sampling
 */
+// TODO triangles should be chosen with probability depending on size OR each light should be a single triangle
+// TODO triangles should be chosen with probability depending on size OR each light should be a single triangle
+// TODO triangles should be chosen with probability depending on size OR each light should be a single triangle
 
 TriangleRecord sample_area_light(const vec4 rands, const int num_lights,
                                  const Light light, out uint triangle_idx,
@@ -562,6 +565,8 @@ vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
     default:
         break;
     }
+    // TODO HERE JUST DIVISION BY TRIANGLES, SHOULD BE NUM_LIGHTS -> fix so that we divide by total_light in triangle light part and by number of lights here
+    // at the moment only right if we have one light made of multiple triangles or one light of any other kind
     pdf_pos_a /= total_light;
     light_record.flags = light.light_flags;
     return L;

@@ -83,6 +83,7 @@ vec3 vcm_connect_cam(const vec3 cam_pos, const vec3 cam_nrm, vec3 n_s,
     return L;
 }
 
+// TODO test if pdf are right, check if we have to divide by lightPickProb
 bool vcm_generate_light_sample(float eta_vc, out VCMState light_state,
                                out bool finite) {
     // Sample light
@@ -585,6 +586,7 @@ vec3 vcm_trace_eye(VCMState camera_state, float eta_vcm, float eta_vc,
     mlt_sampler.splat_cnt = 0;
     light_path_idx *= (pc_ray.max_depth + 1);
 #else
+    // TODO no randomization needed
     uint light_path_idx = uint(rand(seed) * screen_size);
     uint light_path_len = light_path_cnts.d[light_path_idx];
     light_path_idx *= (pc_ray.max_depth + 1);

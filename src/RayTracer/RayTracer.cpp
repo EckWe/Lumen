@@ -91,6 +91,9 @@ void RayTracer::init(Window* window) {
 		case IntegratorType::DDGI:
 			integrator = std::make_unique<DDGI>(this, &scene);
 			break;
+		case IntegratorType::SBDPT:
+			integrator = std::make_unique<SBDPT>(this, &scene);
+			break;
 		default:
 			break;
 	}

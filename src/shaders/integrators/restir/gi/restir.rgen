@@ -36,6 +36,7 @@ void main() {
     float p_q = 0;
     vec3 L_o = vec3(0);
     vec3 x_f = vec3(0);
+    float ray_depth = 0;
     uint mat_idx = -1;
     uint bsdf_props = 0;
     vec4 area_int = (ubo.inv_projection * vec4(2. / gl_LaunchSizeEXT.x,
@@ -45,6 +46,19 @@ void main() {
     bool specular = false;
     vec3 throughput = vec3(1);
     vec3 t0 = vec3(1);
+
+    /*if(gl_LaunchIDEXT.x == 700 && gl_LaunchIDEXT.y == 600 && (pc_ray.frame_num < 5)) {
+
+        vec4 prev_clip = ubo.prev_projection * ubo.prev_view * origin;//vec4(s.x_v, 1);
+    vec3 prev_ndc = prev_clip.xyz / prev_clip.w;
+    vec2 prev_uv = (prev_ndc.xy + 1.f) * 0.5f;
+    vec2 prev_pixel = vec2(prev_uv * gl_LaunchSizeEXT.xy);
+
+        debugPrintfEXT("%f, %f, %f, %f, %f\n", origin.x, origin.y, origin.z, prev_pixel.x, prev_pixel.y);
+        
+    }*/
+
+
     for (int depth = 0;; depth++) {
         traceRayEXT(tlas, flags, 0xFF, 0, 0, 0, origin.xyz, tmin, direction,
                     tmax, 0);
@@ -85,6 +99,7 @@ void main() {
             side = false;
         }
         const vec3 pos = offset_ray(payload.pos, geometry_nrm);
+        
         if (depth == 1) {
             x_s = pos;
             n_s = shading_nrm;
@@ -117,8 +132,10 @@ void main() {
             x_f = f;
             mat_idx = payload.material_idx;
             bsdf_props = hit_mat.bsdf_props;
+            ray_depth = payload.dist;
         }
-
+        
+        //throughput *= f * abs(cos_theta) / pdf;
         if (depth > 0) {
             throughput *= f * abs(cos_theta) / pdf;
         } else {
@@ -126,7 +143,7 @@ void main() {
         }
         specular = (hit_mat.bsdf_props & BSDF_SPECULAR) != 0;
         origin.xyz = pos;
-        float rr_scale = 1.0;
+        /*float rr_scale = 1.0;
         if (hit_mat.bsdf_type == BSDF_GLASS) {
             rr_scale *= side ? 1. / hit_mat.ior : hit_mat.ior;
         }
@@ -136,7 +153,7 @@ void main() {
                 break;
             else
                 throughput /= rr_prob;
-        }
+        }*/
     }
     ivec2 coords = ivec2(0.5 * (1 + d) * vec2(pc_ray.size_x, pc_ray.size_y));
     uint coords_idx = coords.x * pc_ray.size_y + coords.y;
@@ -150,5 +167,7 @@ void main() {
     samples.d[pixel_idx].f = x_f;
     samples.d[pixel_idx].mat_idx = mat_idx;
     samples.d[pixel_idx].bsdf_props = bsdf_props;
-    tmp_col.d[pixel_idx] += col;
+    samples.d[pixel_idx].depth_v = ray_depth;
+    
+    //tmp_col.d[pixel_idx] += L_o;
 }

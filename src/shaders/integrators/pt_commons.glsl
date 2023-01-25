@@ -214,7 +214,7 @@ bool path_trace(inout vec3 throughput, inout bool specular, inout vec3 direction
 		side = false;
 	}
 
-    //origin.xyz = offset_ray(payload.pos, n_g);
+    origin.xyz = offset_ray(payload.pos, n_g);
     
 
 	if ((hit_mat.bsdf_props & BSDF_SPECULAR) == 0) {
@@ -235,12 +235,12 @@ bool path_trace(inout vec3 throughput, inout bool specular, inout vec3 direction
 	float pdf, cos_theta;
 	const vec3 f = sample_bsdf(n_s, wo, hit_mat, 1 /*radiance=cam*/, side, direction, pdf, cos_theta, seed);
 
-	float refl_dir = dot(n_g, direction);
+	/*float refl_dir = dot(n_g, direction);
 	vec3 offset_n = n_g;
 	if (refl_dir < 0 && hit_mat.bsdf_type == BSDF_GLASS)
 	     offset_n = -offset_n;
 
-	origin.xyz = offset_ray(hit_pos, offset_n);
+	origin.xyz = offset_ray(hit_pos, offset_n);*/
 
 
 	if (pdf == 0) {

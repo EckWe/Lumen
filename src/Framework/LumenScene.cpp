@@ -142,7 +142,13 @@ void LumenScene::load_scene(const std::string& path) {
 		} else if (integrator["type"] == "ddgi") {
 			config.integrator_type = IntegratorType::DDGI;
 			config.integrator_name = "DDGI";
-		} 
+		} else if (integrator["type"] == "sbdpt") {
+			config.integrator_type = IntegratorType::SBDPT;
+			config.enable_vm = 0;  // integrator["enable_vm"] == 1;
+			//config.radius_factor = integrator["radius_factor"];
+			config.integrator_name = "SBDPT";
+		}
+		
 		// Load obj file
 		const std::string mesh_file = root + std::string(j["mesh_file"]);
 		tinyobj::ObjReaderConfig reader_config;
@@ -205,7 +211,10 @@ void LumenScene::load_scene(const std::string& path) {
 			// TODO: Implement world transforms
 		}
 		// Get file name for initialization later
-		env_tex = root + std::string(j["environment_texture"]);
+		if (!j["environment_texture"].is_null()) {
+			env_tex = root + std::string(j["environment_texture"]);
+		}
+		
 
 		auto& bsdfs_arr = j["bsdfs"];
 		auto& lights_arr = j["lights"];
@@ -340,8 +349,10 @@ void LumenScene::load_scene(const std::string& path) {
 			config.integrator_type = IntegratorType::ReSTIRGI;
 		} else if (mitsuba_parser.integrator.type == "ddgi") {
 			config.integrator_type = IntegratorType::DDGI;
+		} else if (mitsuba_parser.integrator.type == "sbdpt") {
+			config.integrator_type = IntegratorType::SBDPT;
+			config.enable_vm = false;
 		}
-
 		// Camera
 		config.cam_settings.fov = mitsuba_parser.camera.fov / 2;
 		config.cam_settings.cam_matrix = mitsuba_parser.camera.cam_matrix;

@@ -148,6 +148,7 @@ class RenderPass {
 	void finalize();
 	friend RenderGraph;
 	std::vector<ResourceBinding> bound_resources;
+	std::vector<uint32_t> descriptor_counts;
 
 	std::unordered_map<Buffer*, BufferStatus> affected_buffer_pointers;
 	RenderGraph* rg;
@@ -179,7 +180,7 @@ class RenderPass {
 	Pipeline* pipeline;
 	uint32_t pass_idx;
 	int next_binding_idx = 0;
-	std::vector<uint32_t> descriptor_counts;
+	//std::vector<uint32_t> descriptor_counts;
 	void* push_constant_data = nullptr;
 	bool is_pipeline_cached;
 	bool submitted = false;

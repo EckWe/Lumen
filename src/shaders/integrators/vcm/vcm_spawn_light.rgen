@@ -69,7 +69,9 @@ bool vcm_generate_light_sample(out LightState light_state) {
     const vec3 Le = sample_light_Le(
         seed, pc_ray.num_lights, pc_ray.light_triangle_count, cos_theta, light_record,
         pos, wi, pdf_pos, pdf_dir, phi, u, v);
+    //debugPrintfEXT("test1\n");
     if (pdf_dir <= 0) {
+        debugPrintfEXT("test2\n");
         return false;
     }
     light_state.pos = pos;
