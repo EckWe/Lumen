@@ -210,9 +210,11 @@ void LumenScene::load_scene(const std::string& path) {
 			prim_meshes[s].world_matrix = glm::mat4(1);
 			// TODO: Implement world transforms
 		}
+		bool use_environment_tex = false;
 		// Get file name for initialization later
 		if (!j["environment_texture"].is_null()) {
 			env_tex = root + std::string(j["environment_texture"]);
+			use_environment_tex = true;
 		}
 		
 
@@ -322,6 +324,13 @@ void LumenScene::load_scene(const std::string& path) {
 			}
 			light_idx++;
 		}
+		if (use_environment_tex) {
+			lights.resize(lights.size() + 1);
+			lights[light_idx].light_flags |= LIGHT_ENVIRONMENT;
+			// not finite and not delta;
+			light_idx++;
+		}
+
 	} else if (ends_with(path, ".xml")) {
 		MitsubaParser mitsuba_parser;
 		mitsuba_parser.parse(path);
@@ -501,6 +510,7 @@ void LumenScene::load_scene(const std::string& path) {
 		}
 		compute_scene_dimensions();
 		// Light
+		// TODO complete, only directional light here???
 		i = 0;
 		lights.resize(mitsuba_parser.lights.size());
 		for (auto& light : mitsuba_parser.lights) {

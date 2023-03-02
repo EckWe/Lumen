@@ -113,6 +113,7 @@ vec3 disney_f(const Material mat, const vec3 wo, const vec3 wi,
            0.25 * mat.clearcoat * G_r * F_r * D_r;
 }
 
+
 vec3 sample_bsdf(const vec3 n_s, const vec3 wo, const Material mat,
                  const uint mode, const bool side, out vec3 dir,
                  out float pdf_w, out float cos_theta, const vec2 rands) {

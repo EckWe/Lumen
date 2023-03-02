@@ -31,6 +31,7 @@
 #define LIGHT_SPOT 1
 #define LIGHT_AREA 2
 #define LIGHT_DIRECTIONAL 3
+#define LIGHT_ENVIRONMENT 4
 
 #ifdef __cplusplus
 #include <glm/glm.hpp>
@@ -88,7 +89,7 @@ struct PushConstantRay {
     //float pad;
     int num_textures;
     int first_frame;
-    mat4 probe_rotation;
+    //mat4 probe_rotation;
 };
 
 struct PushConstantPost {
@@ -228,6 +229,7 @@ struct VCMVertex {
     float d_vm;
     uint side;
     uint coords;
+	float pad;
 };
 
 struct SPPMData {
@@ -466,8 +468,10 @@ struct AvgStruct {
 struct LightSpawnSample {
 	vec3 wi;
     vec3 pos;
+    vec3 throughput;
     // light sample firsthit connection radiance to camera firsthit
     vec3 L_o;
+    float mis_weight;
 	float pdf_pos;
 	float pdf_dir;
 	float pdf_emit;
@@ -476,6 +480,29 @@ struct LightSpawnSample {
     uint light_record_flags;
 };
 
+struct LightHitSample {
+    // wo = -wi
+    vec3 L_connect;
+    float d_vcm;
+    vec3 wi;
+    float d_vc;
+    vec3 n_s;
+    float d_vm;
+    vec3 n_g;
+    float area;
+    vec3 light_hit_pos;  
+    float mis_weight;
+    vec3 throughput;
+    float light_pdf_fwd;
+    vec2 uv; // for material
+    float light_pdf_rev;
+    float cam_pdf_fwd;
+    vec3 cam_hit_pos;
+    float cam_pdf_rev;
+    float sampling_pdf_emit;
+    uint material_idx;
+    // side not needed, sample is always on diffuse surface
+};
 
 struct LightSpawnReservoir {
 	uint M;
@@ -484,6 +511,26 @@ struct LightSpawnReservoir {
     LightSpawnSample light_spawn_sample;
 };
 
+struct LightHitReservoir {
+    LightHitSample light_hit_sample;
+    uint M;
+	float W;
+    float test;
+	//float w_sum;
+};
+
+struct LightTransferState {
+    vec3 wi;
+    vec3 n_s;
+    vec3 pos;
+    vec2 uv;
+    vec3 throughput;
+    uint material_idx;
+    float area;
+    float d_vcm;
+    float d_vc;
+    float d_vm;
+};
 
 
 // Scene buffer addresses
@@ -561,7 +608,7 @@ struct SceneDesc {
     // SBDPT
 	uint64_t light_vertices_addr;
 	uint64_t temporal_light_origin_reservoirs_addr;
-	uint64_t test_addr;
+	uint64_t light_transfer_addr;
 };
 
 struct Desc2 {

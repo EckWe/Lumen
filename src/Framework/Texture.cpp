@@ -139,6 +139,7 @@ void Texture2D::load_from_data(VulkanContext* ctx, void* data, VkDeviceSize size
 	copy_cmd.submit();
 	staging_buffer.destroy();
 	img_view = create_image_view(ctx->device, img, info.format);
+	this->format = info.format;
 	this->sampler = a_sampler;
 
 	layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;

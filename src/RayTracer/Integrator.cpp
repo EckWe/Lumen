@@ -151,7 +151,7 @@ void Integrator::init() {
 			i++;
 		}
 	}
-	// Initialize environment map
+	// Initialize environment map TODO optimize
 	if (lumen_scene->env_tex != "") {
 		env_map = EnvMap(lumen_scene->env_tex, instance);
 		diffuse_textures.push_back(env_map.env_tex);
@@ -232,7 +232,6 @@ void Integrator::create_tlas() {
 	}
 
 	total_light_area += total_light_triangle_area;
-
 	instance->vkb.build_tlas(tlas, VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR);
 }
 
@@ -292,6 +291,11 @@ bool Integrator::update() {
 		camera->position -= up * trans_speed;
 		updated = true;
 	}
+	if (instance->window->is_key_held(KeyInput::KEY_H)) {
+		updated = true;
+	}
+
+
 	bool result = false;
 	if (updated) {
 		result = true;

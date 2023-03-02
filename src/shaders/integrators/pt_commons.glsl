@@ -56,7 +56,7 @@ vec3 uniform_sample_light(const Material mat, vec3 pos, const bool side,
     return res;
 }
 
-vec3 uniform_sample_env_light(const vec2 rands_pos, const vec3 p, out float pdf, out vec3 wi, out float wi_len) {
+vec3 uniform_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 wi, out float wi_len) {
 
     // Uniform sample sphere to get direction - pbrt
 	float z = 1.f - 2.f * rands_pos.x;
@@ -78,7 +78,8 @@ vec3 uniform_sample_env_light(const vec2 rands_pos, const vec3 p, out float pdf,
 }
 
 // TODO double check even spherical direction distribution
-vec3 importance_sample_env_light(const vec2 rands_pos, const vec3 p, out float pdf, out vec3 wi, out float wi_len) {
+// hardcoded for warped spherical environment map in resolution 4096x2048 - here 512x256 is used for importance sampling
+/*vec3 importance_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 wi, out float wi_len) {
 
 	vec2 rnd = rands_pos;
 	ivec2 pos = ivec2(0, 0);
@@ -151,6 +152,19 @@ vec3 importance_sample_env_light(const vec2 rands_pos, const vec3 p, out float p
 	return result;
 }
 
+vec3 importance_sample_env_light_pdf(in vec3 dir, out float pdf) {
+
+	vec2 uv = dir_to_latlong(dir);
+	// TODO not hardcoded and try original res for mip map -> change at creation
+	ivec2 pos = ivec2(uv * vec2(512, 256));
+	int tex_array_offset = pc_ray.num_textures;
+	float avg_intensity = texelFetch(scene_textures[tex_array_offset + top_mip_level], ivec2(0, 0), 0).x;
+	pdf = texelFetch(scene_textures[tex_array_offset], pos, 0).x / avg_intensity;
+	pdf = pdf * (1 / (2.f * PI2));
+
+	vec3 result = texture(scene_textures[tex_array_offset - 1], uv).xyz;
+	return result;
+}*/
 
 
 vec3 sample_env_light(const Material mat, vec3 pos, const bool side, const vec3 n_s, const vec3 wo,

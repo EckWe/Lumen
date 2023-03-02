@@ -250,7 +250,99 @@ vec3 uniform_sample_cone(vec2 uv, float cos_max) {
     return vec3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
 }
 
-vec3 sample_light_Li(const vec4 rands_pos, const vec3 p, const int num_lights,
+// TODO double check even spherical direction distribution
+// hardcoded for warped spherical environment map in resolution 4096x2048 - here 512x256 is used for importance sampling
+vec3 importance_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 wi, out float wi_len, in int texture_offset) {
+
+	vec2 rnd = rands_pos;
+	ivec2 pos = ivec2(0, 0);
+	int tex_array_offset = texture_offset;
+	int top_mip_level = 9;
+
+	// aspect ratio of envmap is 2:1, first decide left/right on level 1 (2 by 1 pixels)
+	float left = texelFetch(scene_textures[tex_array_offset + top_mip_level - 1], pos, 0).x;
+	float right = texelFetch(scene_textures[tex_array_offset + top_mip_level - 1], pos + ivec2(1, 0), 0).x;
+
+	float left_n = left / (left + right);
+	
+
+	if (rnd.x < left_n) {
+		rnd.x /= left_n;
+	} else {
+		pos.x += 1;
+		rnd.x = (rnd.x - left_n) / (1.f - left_n);
+	}
+
+	// decide on 2x2 texel position from now on
+	for (int mip = top_mip_level - 2; mip >= 0; mip--) {
+		pos *= 2;
+
+		vec4 v;
+		v.x = texelFetch(scene_textures[tex_array_offset + mip], pos, 0).x;
+		v.y = texelFetch(scene_textures[tex_array_offset + mip], pos + ivec2(1, 0), 0).x;
+		v.z = texelFetch(scene_textures[tex_array_offset + mip], pos + ivec2(0, 1), 0).x;
+		v.w = texelFetch(scene_textures[tex_array_offset + mip], pos + ivec2(1, 1), 0).x;
+
+		left = v.x + v.z;
+		right = v.y + v.w;
+
+		left_n = left / (left + right);
+
+		ivec2 offset;
+
+		if (rnd.x < left_n) {
+			offset.x = 0;
+			rnd.x = rnd.x / left_n;
+		} else {
+			offset.x = 1;
+			rnd.x = (rnd.x - left_n) / (1.f - left_n);
+		}
+
+		float upper_n = bool(offset.x) ? (v.y / right) : (v.x / left);
+
+		if (rnd.y < upper_n) {
+			offset.y = 0;
+			rnd.y = rnd.y / upper_n;
+		} else {
+			offset.y = 1;
+			rnd.y = (rnd.y - upper_n) / (1.f - upper_n);
+		}
+
+		pos += offset;
+	}
+	vec2 final_pos = pos + rnd;
+	vec2 uv = final_pos / vec2(512, 256);
+
+	wi = latlong_to_dir(uv);
+	// TODO double check
+	wi_len = 10000;
+	float avg_intensity = texelFetch(scene_textures[tex_array_offset + top_mip_level], ivec2(0, 0), 0).x;
+	pdf = texelFetch(scene_textures[tex_array_offset], pos, 0).x / avg_intensity;
+	pdf = pdf * (1 / (2.f * PI2));
+
+	vec3 result = texture(scene_textures[tex_array_offset - 1], uv).xyz;
+
+	return result;
+}
+
+vec3 importance_sample_env_light_pdf(in vec3 dir, out float pdf, in int texture_offset) {
+    // TODO unhardcode
+    int top_mip_level = 9;
+	vec2 uv = dir_to_latlong(dir);
+	// TODO not hardcoded and try original res for mip map -> change at creation
+	ivec2 pos = ivec2(uv * vec2(512, 256));
+	int tex_array_offset = texture_offset;
+	float avg_intensity = texelFetch(scene_textures[tex_array_offset + top_mip_level], ivec2(0, 0), 0).x;
+	pdf = texelFetch(scene_textures[tex_array_offset], pos, 0).x / avg_intensity;
+	pdf = pdf * (1 / (2.f * PI2));
+
+	vec3 result = texture(scene_textures[tex_array_offset - 1], uv).xyz;
+	return result;
+}
+
+// TODO unify methods, refactor
+// Needs to be refactored before use
+vec3 sample_light_Li_with_n(const vec4 rands_pos, const vec3 p, const int num_lights,
                      out vec3 wi, out float wi_len, out vec3 n, out vec3 pos,
                      out float pdf_pos_a, out float cos_from_light,
                      out LightRecord light_record) {
@@ -322,7 +414,8 @@ vec3 sample_light_Li(const vec4 rands_pos, const vec3 p, const int num_lights,
     return L;
 }
 
-vec3 sample_light_Li(const vec4 rands_pos, const vec3 p, const int num_lights,
+// Needs to be refactored before use
+vec3 sample_light_Li_pdf_pos(const vec4 rands_pos, const vec3 p, const int num_lights,
                      out float pdf_pos_w, out vec3 wi, out float wi_len,
                      out float pdf_pos_a, out float cos_from_light,
                      out LightRecord light_record) {
@@ -388,11 +481,11 @@ vec3 sample_light_Li(const vec4 rands_pos, const vec3 p, const int num_lights,
     light_record.flags = light.light_flags;
     return L;
 }
-
-vec3 sample_light_Li(const vec4 rands_pos, const vec3 p, const int num_lights,
+// useable, but only single light type possible
+vec3 sample_light_Li_dir_w(const vec4 rands_pos, const vec3 p, const int num_lights,
                      out vec3 wi, out float wi_len, out float pdf_pos_w,
                      out float pdf_pos_dir_w, out float cos_from_light,
-                     out LightRecord light_record) {
+                     out LightRecord light_record, in int texture_offset) {
     uint light_idx = uint(rands_pos.x * num_lights);
     Light light = lights[light_idx];
     uint light_type = get_light_type(light.light_flags);
@@ -449,39 +542,47 @@ vec3 sample_light_Li(const vec4 rands_pos, const vec3 p, const int num_lights,
         L = light.L;
         cos_from_light = 1.;
     } break;
+    case LIGHT_ENVIRONMENT: {
+        float map_pdf;
+        L = importance_sample_env_light(rands_pos.zw, map_pdf, wi, wi_len, texture_offset);
+        pdf_pos_w = map_pdf;
+        pdf_pos_dir_w = pdf_pos_w * INV_PI / (light.world_radius * light.world_radius);
+        cos_from_light = 1.f;
+    } break;
     default:
         break;
     }
     light_record.flags = light.light_flags;
     return L;
 }
-
-vec3 sample_light_Li(inout uvec4 seed, const vec3 p, const int num_lights,
+// used in direct lighting in bidirectional methods
+vec3 sample_light_Li_dir_w(inout uvec4 seed, const vec3 p, const int num_lights,
                      out vec3 wi, out float wi_len, out float pdf_pos_w,
                      out float pdf_pos_dir_w, out LightRecord record,
-                     out float cos_from_light) {
+                     out float cos_from_light, in int texture_offset) {
     const vec4 rands = vec4(rand(seed), rand(seed), rand(seed), rand(seed));
-    return sample_light_Li(rands, p, num_lights, wi, wi_len, pdf_pos_w,
-                           pdf_pos_dir_w, cos_from_light, record);
+    return sample_light_Li_dir_w(rands, p, num_lights, wi, wi_len, pdf_pos_w,
+                           pdf_pos_dir_w, cos_from_light, record, texture_offset);
 }
-
-vec3 sample_light_Li(inout uvec4 seed, const vec3 p, const int num_lights,
+// used in uniform_sample_light in pt_commons
+vec3 sample_light_Li_pdf_pos(inout uvec4 seed, const vec3 p, const int num_lights,
                      out float pdf_pos_w, out vec3 wi, out float wi_len,
                      out float pdf_pos_a, out float cos_from_light,
                      out LightRecord record) {
     const vec4 rands = vec4(rand(seed), rand(seed), rand(seed), rand(seed));
-    return sample_light_Li(rands, p, num_lights, pdf_pos_w, wi, wi_len,
+    return sample_light_Li_pdf_pos(rands, p, num_lights, pdf_pos_w, wi, wi_len,
                            pdf_pos_a, cos_from_light, record);
 }
 
-vec3 sample_light_Li(inout uvec4 seed, const vec3 p, const int num_lights,
+vec3 sample_light_Li_with_n(inout uvec4 seed, const vec3 p, const int num_lights,
                      out vec3 wi, out float wi_len, out vec3 n, out vec3 pos,
                      out float pdf_pos_a, out float cos_from_light,
                      out LightRecord light_record) {
     const vec4 rands_pos = vec4(rand(seed), rand(seed), rand(seed), rand(seed));
-    return sample_light_Li(rands_pos, p, num_lights, wi, wi_len, n, pos,
+    return sample_light_Li_with_n(rands_pos, p, num_lights, wi, wi_len, n, pos,
                            pdf_pos_a, cos_from_light, light_record);
 }
+
 
 vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
                      const int num_lights, const int total_light,
@@ -489,7 +590,7 @@ vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
                      out vec3 pos, out vec3 wi, out vec3 n, out float pdf_pos_a,
                      out float pdf_dir_w, out float pdf_emit_w,
                      out float pdf_direct_a, out float phi, out float u,
-                     out float v) {
+                     out float v, in int texture_offset) {
     uint light_idx = uint(rands_pos.x * num_lights);
     Light light = lights[light_idx];
     vec3 L = vec3(0);
@@ -562,12 +663,43 @@ vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
         v = 0;
         n = wi;
     } break;
+    case LIGHT_ENVIRONMENT: {
+        
+        
+
+        float wi_len;
+        L = importance_sample_env_light(rands_pos.zw, pdf_dir_w, wi, wi_len, texture_offset);
+
+        vec3 v1, v2;
+        make_coord_system(-wi, v1, v2);
+        vec2 uv = concentric_sample_disk(rands_dir);
+        
+        pos = light.world_center + light.world_radius * (-wi + uv.x * v1 + uv.y * v2);
+
+        /*L = vec3(1576.f, 888.f, 232.5f);
+        wi = vec3(0.218985f, 0.940313f, -0.260495f);
+        pos = vec3(-7.055150f, -9.491848f, 7.071637f);
+        //pdf_pos_a = 0.002098.f;
+        pdf_dir_w = 130.770462f;*/
+
+
+        
+        pdf_pos_a = 1. / (PI * light.world_radius * light.world_radius);
+        
+        pdf_emit_w = pdf_pos_a * pdf_dir_w;
+        pdf_direct_a = pdf_dir_w;
+        cos_from_light = 1;
+        u = 0;
+        v = 0;
+        n = wi;
+    } break;
     default:
         break;
     }
     // TODO HERE JUST DIVISION BY TRIANGLES, SHOULD BE NUM_LIGHTS -> fix so that we divide by total_light in triangle light part and by number of lights here
     // at the moment only right if we have one light made of multiple triangles or one light of any other kind
-    pdf_pos_a /= total_light;
+    //pdf_pos_a /= total_light;
+    pdf_pos_a /= num_lights;
     light_record.flags = light.light_flags;
     return L;
 }
@@ -576,14 +708,14 @@ vec3 sample_light_Le(inout uvec4 seed, const int num_lights,
                      const int total_light, out float cos_from_light,
                      out LightRecord light_record, out vec3 pos, out vec3 wi,
                      out float pdf_pos_a, out float pdf_dir_w, out float phi,
-                     out float u, out float v) {
+                     out float u, out float v, in int texture_offset) {
     const vec4 rands_pos = vec4(rand(seed), rand(seed), rand(seed), rand(seed));
     const vec2 rands_dir = vec2(rand(seed), rand(seed));
     vec3 n;
     float pdf_emit_w, pdf_direct_a;
     return sample_light_Le(rands_pos, rands_dir, num_lights, total_light,
                            cos_from_light, light_record, pos, wi, n, pdf_pos_a,
-                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v);
+                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v, texture_offset);
 }
 
 vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
@@ -591,32 +723,32 @@ vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
                      out float cos_from_light, out LightRecord light_record,
                      out vec3 pos, out vec3 wi, out float pdf_pos_a,
                      out float pdf_dir_w, out float pdf_emit_w,
-                     out float pdf_direct_a) {
+                     out float pdf_direct_a, in int texture_offset) {
     float phi, u, v;
     vec3 n;
     return sample_light_Le(rands_pos, rands_dir, num_lights, total_light,
                            cos_from_light, light_record, pos, wi, n, pdf_pos_a,
-                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v);
+                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v, texture_offset);
 }
 
 vec3 sample_light_Le(inout uvec4 seed, const int num_lights,
                      const int total_light, out float cos_from_light,
                      out LightRecord light_record, out vec3 pos, out vec3 wi,
                      out float pdf_pos_a, out float pdf_dir_w,
-                     out float pdf_emit_w, out float pdf_direct_a) {
+                     out float pdf_emit_w, out float pdf_direct_a, in int texture_offset) {
     const vec4 rands_pos = vec4(rand(seed), rand(seed), rand(seed), rand(seed));
     const vec2 rands_dir = vec2(rand(seed), rand(seed));
     float phi, u, v;
     vec3 n;
     return sample_light_Le(rands_pos, rands_dir, num_lights, total_light,
                            cos_from_light, light_record, pos, wi, n, pdf_pos_a,
-                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v);
+                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v, texture_offset);
 }
 
 vec3 sample_light_Le(inout uvec4 seed, const int num_lights,
                      const int total_light, out float cos_from_light,
                      out LightRecord light_record, out vec3 pos, out vec3 wi,
-                     out float pdf_pos_a, out float pdf_dir_w) {
+                     out float pdf_pos_a, out float pdf_dir_w, in int texture_offset) {
     const vec4 rands_pos = vec4(rand(seed), rand(seed), rand(seed), rand(seed));
     const vec2 rands_dir = vec2(rand(seed), rand(seed));
     float phi, u, v;
@@ -624,32 +756,32 @@ vec3 sample_light_Le(inout uvec4 seed, const int num_lights,
     float pdf_emit_w, pdf_direct_a;
     return sample_light_Le(rands_pos, rands_dir, num_lights, total_light,
                            cos_from_light, light_record, pos, wi, n, pdf_pos_a,
-                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v);
+                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v, texture_offset);
 }
 
 vec3 sample_light_Le(const int num_lights, const int total_light,
                      out float cos_from_light, out LightRecord light_record,
                      out vec3 pos, out vec3 wi, out vec3 n, out float pdf_pos_a,
                      out float pdf_dir_w, const vec4 rands_pos,
-                     const vec2 rands_dir) {
+                     const vec2 rands_dir, in int texture_offset) {
     float phi, u, v;
     float pdf_emit_w, pdf_direct_a;
     return sample_light_Le(rands_pos, rands_dir, num_lights, total_light,
                            cos_from_light, light_record, pos, wi, n, pdf_pos_a,
-                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v);
+                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v, texture_offset);
 }
 
 vec3 sample_light_Le(inout uvec4 seed, const int num_lights,
                      const int total_light, out float cos_from_light,
                      out LightRecord light_record, out vec3 pos, out vec3 wi,
-                     out vec3 n, out float pdf_pos_a, out float pdf_dir_w) {
+                     out vec3 n, out float pdf_pos_a, out float pdf_dir_w, in int texture_offset) {
     const vec4 rands_pos = vec4(rand(seed), rand(seed), rand(seed), rand(seed));
     const vec2 rands_dir = vec2(rand(seed), rand(seed));
     float phi, u, v;
     float pdf_emit_w, pdf_direct_a;
     return sample_light_Le(rands_pos, rands_dir, num_lights, total_light,
                            cos_from_light, light_record, pos, wi, n, pdf_pos_a,
-                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v);
+                           pdf_dir_w, pdf_emit_w, pdf_direct_a, phi, u, v, texture_offset);
 }
 
 vec3 sample_light_with_idx(const vec4 rands_pos, const vec3 p,

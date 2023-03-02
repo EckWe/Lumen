@@ -144,8 +144,8 @@ void DDGI::render() {
 		std::mt19937 gen(rd());
 		std::uniform_real_distribution<> dis(-1.0, 1.0);
 		glm::vec4 rands(0.5 * dis(gen) + 0.5, dis(gen), dis(gen), dis(gen));
-		pc_ray.probe_rotation = glm::mat4_cast(
-			glm::angleAxis(2.0f * glm::pi<float>() * rands.x, glm::normalize(glm::vec3(rands.y, rands.z, rands.w))));
+		/* pc_ray.probe_rotation = glm::mat4_cast(
+			glm::angleAxis(2.0f * glm::pi<float>() * rands.x, glm::normalize(glm::vec3(rands.y, rands.z, rands.w))));*/
 	}
 	std::initializer_list<ResourceBinding> rt_bindings = {
 		output_tex,

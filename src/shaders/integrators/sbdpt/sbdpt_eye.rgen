@@ -72,23 +72,47 @@ void main() {
     camera_state.d_vc = 0;
     camera_state.d_vm = 0;
 
+    ///////
+
+
+
+
+
+    
+    ///////
     col = vcm_trace_eye(camera_state, eta_vcm, eta_vc, eta_vm);
-    if (isnan(luminance(col))) {
-        debugPrintfEXT("nan\n");
-        return;
-    }
+
+    //col = camera_state.wi;
+    //if (pixel_idx == 30000) {
+        vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+    //if(old_col != col) {
+        //col -= old_col;
+			//debugPrintfEXT("test3 %f, %f, %f ... %f, %f, %f,  %u \n", old_col.x, old_col.y, old_col.z, col.x, col.y, col.z, pc_ray.frame_num);
+   // }
+    //if (isnan(luminance(col))) { //&& gl_LaunchIDEXT.x == 600 && gl_LaunchIDEXT.y == 300) {
+        //debugPrintfEXT("nan\n");
+   //     return;
+    //}
+    //if(luminance(col) > 0.63 && gl_LaunchIDEXT.x == 116 && gl_LaunchIDEXT.y == 40) {
+        //col = vec3(0,1,0);
+    //}
+    
     vec3 splat_img = tmp_col.d[pixel_idx];
     col += splat_img;
     tmp_col.d[pixel_idx] = vec3(0);
 //#undef light_vtx
-    if (pc_ray.frame_num > 0) {
-        float w = 1. / float(pc_ray.frame_num + 1);
+    /*if (pc_ray.frame_num > 1) {
+        float w = 1. / float(pc_ray.frame_num);
         vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-         imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
-        //imageStore(image, ivec2(gl_LaunchIDEXT.xy),
-        //           vec4(mix(old_col, col, w), 1.f));
+            //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
+        imageStore(image, ivec2(gl_LaunchIDEXT.xy),
+                   vec4(mix(old_col, col, w), 1.f));
     } else {
-
         imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
-    }
+    }*/
+    //vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+    //if (pc_ray.frame_num == 1)
+    
+    //if (col != vec3(0.3,0.3,0))
+        imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
 }

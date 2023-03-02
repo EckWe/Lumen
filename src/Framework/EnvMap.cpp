@@ -48,8 +48,8 @@ void EnvMap::destroy() {
 	for (int i = 0; i < importance_mip_maps.size(); i++) {
 		//importance_mip_maps[i].destroy();
 	}
-	//vkDestroySampler(instance->vkb.ctx.device, env_sampler, nullptr);
-	//vkDestroySampler(instance->vkb.ctx.device, importance_sampler, nullptr);
+	vkDestroySampler(instance->vkb.ctx.device, env_sampler, nullptr);
+	vkDestroySampler(instance->vkb.ctx.device, importance_sampler, nullptr);
 }
 
 void EnvMap::create_importance_map(const std::string texture_path) {
