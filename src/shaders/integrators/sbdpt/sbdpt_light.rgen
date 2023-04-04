@@ -401,9 +401,9 @@ void main() {
     //fill_light_with_lighthit_resampling(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm, camera_state, pdf_emit, pdf_pos);
     //vec3 col =*/
 
-
-
-    /*LightTransferState lts = light_transfer_states.d[pixel_idx];
+//#define TEMP_RESAMPLING
+#ifdef TEMP_RESAMPLING
+    LightTransferState lts = light_transfer_states.d[pixel_idx];
     vcm_state.wi = lts.wi;
     vcm_state.n_s = lts.n_s;
     vcm_state.pos = lts.pos;
@@ -416,11 +416,12 @@ void main() {
     vcm_state.d_vm = lts.d_vm;
 
 
-    fill_light_continued(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm);*/
-    
+    fill_light_continued(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm);
+#endif
+#ifndef TEMP_RESAMPLING
     vcm_generate_light_sample(eta_vc, vcm_state, finite);
     vcm_fill_light(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm);
-    
+#endif
     /*if (gl_LaunchIDEXT.x == 116 && gl_LaunchIDEXT.y == 40){
         //debugPrintfEXT("gen0: %f, %f, %f ... %f, %f \n", col.x, col.y, col.z, vcm_state.d_vc, vcm_state.d_vcm);
     }

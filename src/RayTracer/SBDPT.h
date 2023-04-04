@@ -19,6 +19,7 @@ class SBDPT : public Integrator {
 	Buffer temporal_light_origin_reservoirs;
 	Buffer color_storage_buffer;
 	Buffer light_transfer_buffer;
+	Buffer spatial_light_origin_reservoirs;
 
 	bool do_spatiotemporal = false;
 };

@@ -14,7 +14,7 @@ vec3 uniform_sample_light(const Material mat, vec3 pos, const bool side,
     LightRecord record;
     float cos_from_light;
     const vec3 Le =
-        sample_light_Li(seed, pos, pc_ray.num_lights, pdf_light_w, wi, wi_len,
+        sample_light_Li_pdf_pos(seed, pos, pc_ray.num_lights, pdf_light_w, wi, wi_len,
                         pdf_light_a, cos_from_light, record);
     const vec3 p = offset_ray2(pos, n_s);
     float bsdf_pdf;
@@ -178,7 +178,7 @@ vec3 sample_env_light(const Material mat, vec3 pos, const bool side, const vec3 
 
 	//float cos_from_light;
 	const vec3 Le = //uniform_sample_env_light(samples, pos, pdf_light_w, wi, wi_len);
-		importance_sample_env_light(samples, pos, pdf_light_w, wi, wi_len);
+		importance_sample_env_light(samples, pdf_light_w, wi, wi_len, pc_ray.num_textures);
 
 	const vec3 p = offset_ray2(pos, n_s);
 	float bsdf_pdf;
@@ -234,8 +234,8 @@ bool path_trace(inout vec3 throughput, inout bool specular, inout vec3 direction
 	if ((hit_mat.bsdf_props & BSDF_SPECULAR) == 0) {
 		const float light_pick_pdf = 1. / pc_ray.light_triangle_count;
 		//if (depth > 0)
-		//col += throughput * uniform_sample_light(hit_mat, payload.pos, side, n_s, wo, specular) / light_pick_pdf;
-		col += throughput * sample_env_light(hit_mat, payload.pos, side, n_s, wo, specular);
+		col += throughput * uniform_sample_light(hit_mat, payload.pos, side, n_s, wo, specular) / light_pick_pdf;
+		//col += throughput * sample_env_light(hit_mat, payload.pos, side, n_s, wo, specular);
 	}
 	// TODO test self intersection offset fix
 	//float refl_dir = dot(n_g, direction);

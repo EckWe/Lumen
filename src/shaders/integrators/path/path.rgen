@@ -15,7 +15,7 @@ const float tmin = 0.001;
 const float tmax = 10000.0;
 #define RR_MIN_DEPTH 3
 uint pixel_idx = (gl_LaunchIDEXT.x * gl_LaunchSizeEXT.y + gl_LaunchIDEXT.y);
-uvec4 seed = init_rng(gl_LaunchIDEXT.xy, gl_LaunchSizeEXT.xy, pc_ray.frame_num);
+uvec4 seed = init_rng(gl_LaunchIDEXT.xy, gl_LaunchSizeEXT.xy, pc_ray.total_frame_num);
 
 #include "../pt_commons.glsl"
 
@@ -54,15 +54,15 @@ void main() {
         return;
     }
 
-    if (pc_ray.frame_num > 0) {
+    /*if (pc_ray.frame_num > 1) {
 
         float w = 1. / float(pc_ray.frame_num + 1);
         vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
         // imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
         imageStore(image, ivec2(gl_LaunchIDEXT.xy),
                    vec4(mix(old_col, col, w), 1.f));
-    } else {
+    } else {*/
 
         imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
-    }
+    //}
 }

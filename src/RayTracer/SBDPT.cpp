@@ -28,10 +28,16 @@ void SBDPT::init() {
 							VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE,
 							2 * instance->width * instance->height * sizeof(LightHitReservoir));
 	light_transfer_buffer.create("Light Transfer Storage", &instance->vkb.ctx,
-								 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-									 VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-								 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE,
-								 instance->width * instance->height * sizeof(LightTransferState));
+							VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+								VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+							VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE,
+							instance->width * instance->height * sizeof(LightTransferState));
+	spatial_light_origin_reservoirs.create("Spatial Reservoirs", &instance->vkb.ctx,
+							VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+								VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+								VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+							VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE,
+							2 * instance->width * instance->height * sizeof(LightHitReservoir));
 
 	SceneDesc desc;
 	desc.vertex_addr = vertex_buffer.get_device_address();
@@ -47,6 +53,7 @@ void SBDPT::init() {
 	desc.path_cnt_addr = light_path_cnt_buffer.get_device_address();
 	desc.temporal_light_origin_reservoirs_addr = temporal_light_origin_reservoirs.get_device_address();
 	desc.light_transfer_addr = light_transfer_buffer.get_device_address();
+	desc.spatial_light_origin_reservoirs_addr = spatial_light_origin_reservoirs.get_device_address();
 
 	scene_desc_buffer.create(
 		&instance->vkb.ctx, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
@@ -62,9 +69,12 @@ void SBDPT::init() {
 	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, light_vertices_addr, &light_vertices_buffer, instance->vkb.rg);
 	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, color_storage_addr, &color_storage_buffer, instance->vkb.rg);
 	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, path_cnt_addr, &light_path_cnt_buffer, instance->vkb.rg);
-	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, temporal_light_origin_reservoirs_addr, &temporal_light_origin_reservoirs,
+	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, temporal_light_origin_reservoirs_addr,
+									&temporal_light_origin_reservoirs,
 								 instance->vkb.rg);	
 	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, light_transfer_addr, &light_transfer_buffer, instance->vkb.rg);
+	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, spatial_light_origin_reservoirs_addr,
+								 &spatial_light_origin_reservoirs, instance->vkb.rg);
 }
 
 void SBDPT::render() {
@@ -97,6 +107,9 @@ void SBDPT::render() {
 	} else {
 		prepare_pass.skip_execution();
 	}*/
+//#define TEMP_RESAMPLING
+//#define SPATIAL_RESAMPLING
+#ifdef TEMP_RESAMPLING
 	instance->vkb.rg
 		->add_rt("SBDPT - Init",
 				 {
@@ -121,8 +134,34 @@ void SBDPT::render() {
 		.bind(mesh_lights_buffer)
 		.bind_texture_array(diffuse_textures)
 		.bind_tlas(instance->vkb.tlas);
+#endif
+#ifdef SPATIAL_RESAMPLING
+	  instance->vkb.rg
+		->add_rt("SBDPT - Spatial",
+				 {
 
-	  /* instance->vkb.rg
+					 .shaders = {{"src/shaders/integrators/sbdpt/sbdpt_light_spatial.rgen"},
+								 {"src/shaders/ray.rmiss"},
+								 {"src/shaders/ray_shadow.rmiss"},
+								 {"src/shaders/ray.rchit"},
+								 {"src/shaders/ray.rahit"}},
+					 .dims = {instance->width, instance->height},
+					 .accel = instance->vkb.tlas.accel})
+
+		.push_constants(&pc_ray)
+		//.zero(temporal_light_origin_reservoirs, !do_spatiotemporal)
+		//.zero(light_vertices_buffer)
+		.bind({
+			output_tex,
+			prim_lookup_buffer,
+			scene_ubo_buffer,
+			scene_desc_buffer,
+		})
+		.bind(mesh_lights_buffer)
+		.bind_texture_array(diffuse_textures)
+		.bind_tlas(instance->vkb.tlas);
+#endif
+	  instance->vkb.rg
 		->add_rt("SBDPT - Light Vertices",
 				 {
 
@@ -145,9 +184,10 @@ void SBDPT::render() {
 		})
 		.bind(mesh_lights_buffer)
 		.bind_texture_array(diffuse_textures)
-		.bind_tlas(instance->vkb.tlas);*/
+		.bind_tlas(instance->vkb.tlas);
+
 	//.finalize();
-	 instance->vkb.rg
+	instance->vkb.rg
 		->add_rt("SBDPT - Trace Eye", {.shaders = {{"src/shaders/integrators/sbdpt/sbdpt_eye.rgen"},
 												 {"src/shaders/ray.rmiss"},
 												 {"src/shaders/ray_shadow.rmiss"},
@@ -195,7 +235,8 @@ void SBDPT::destroy() {
 										&light_state_buffer,
 										&light_vertices_buffer,
 										&temporal_light_origin_reservoirs,
-										&light_transfer_buffer};
+										&light_transfer_buffer,
+										&spatial_light_origin_reservoirs};
 	for (auto b : buffer_list) {
 		b->destroy();
 	}

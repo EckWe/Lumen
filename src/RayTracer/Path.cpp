@@ -55,13 +55,15 @@ void Path::render() {
 		.bind_tlas(instance->vkb.tlas);
 		//.bind(env_map.env_tex);
 	instance->vkb.rg->run_and_submit(cmd);
+
+	pc_ray.total_frame_num++;
 }
 
 bool Path::update() {
 	pc_ray.frame_num++;
 	bool updated = Integrator::update();
 	if (updated) {
-		pc_ray.frame_num = 0;
+		pc_ray.frame_num = 1;
 	}
 	return updated;
 }

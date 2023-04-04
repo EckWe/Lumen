@@ -28,7 +28,7 @@ const float tmax = 10000.0;
 #define RR_MIN_DEPTH 3
 uint pixel_idx = (gl_LaunchIDEXT.x * gl_LaunchSizeEXT.y + gl_LaunchIDEXT.y);
 uvec4 seed = init_rng(gl_LaunchIDEXT.xy, gl_LaunchSizeEXT.xy,
-                      pc_ray.frame_num ^ pc_ray.random_num);
+                      pc_ray.total_frame_num);
 uint vcm_light_path_idx =
     (gl_LaunchIDEXT.x * gl_LaunchSizeEXT.y + gl_LaunchIDEXT.y) *
     (pc_ray.max_depth + 1);
@@ -84,7 +84,7 @@ void main() {
 
     //col = camera_state.wi;
     //if (pixel_idx == 30000) {
-        vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+        //vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
     //if(old_col != col) {
         //col -= old_col;
 			//debugPrintfEXT("test3 %f, %f, %f ... %f, %f, %f,  %u \n", old_col.x, old_col.y, old_col.z, col.x, col.y, col.z, pc_ray.frame_num);
@@ -107,12 +107,17 @@ void main() {
             //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
         imageStore(image, ivec2(gl_LaunchIDEXT.xy),
                    vec4(mix(old_col, col, w), 1.f));
-    } else {
+    } else {*/
         imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
-    }*/
+    //}
+    //if (pc_ray.frame_num == 2) {
+       // imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
+    //}
+
+
     //vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
     //if (pc_ray.frame_num == 1)
     
     //if (col != vec3(0.3,0.3,0))
-        imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
+        //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
 }

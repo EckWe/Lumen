@@ -511,6 +511,8 @@ void LumenScene::load_scene(const std::string& path) {
 		compute_scene_dimensions();
 		// Light
 		// TODO complete, only directional light here???
+		#define ONLY_ENV 
+		#ifndef ONLY_ENV
 		i = 0;
 		lights.resize(mitsuba_parser.lights.size());
 		for (auto& light : mitsuba_parser.lights) {
@@ -524,6 +526,18 @@ void LumenScene::load_scene(const std::string& path) {
 			}
 			i++;
 		}
+		#endif
+		#ifdef ONLY_ENV
+		// TODO add config variable
+		bool use_environment_tex = true;
+		if (use_environment_tex) {
+
+			lights.resize(lights.size() + 1);
+			lights[lights.size()-1].light_flags |= LIGHT_ENVIRONMENT;
+			env_tex = root + "env_tex.hdr";
+			// not finite and not delta;
+		}
+		#endif
 	}
 }
 

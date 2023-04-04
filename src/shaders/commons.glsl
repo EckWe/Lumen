@@ -676,7 +676,7 @@ vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
         
         pos = light.world_center + light.world_radius * (-wi + uv.x * v1 + uv.y * v2);
 
-        /*L = vec3(1576.f, 888.f, 232.5f);
+        /* L = vec3(1576.f, 888.f, 232.5f);
         wi = vec3(0.218985f, 0.940313f, -0.260495f);
         pos = vec3(-7.055150f, -9.491848f, 7.071637f);
         //pdf_pos_a = 0.002098.f;

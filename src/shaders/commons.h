@@ -49,8 +49,8 @@ using uint = unsigned int;
 #endif
 
 #define ENABLE_DISNEY 0
-#define DIFFUSE_ONLY 0
-#define DIFFUSE_AND_GLOSSY_ONLY 1
+#define DIFFUSE_ONLY 1
+#define DIFFUSE_AND_GLOSSY_ONLY 0
 
 struct PushConstantRay {
     vec4 clear_color;
@@ -499,6 +499,7 @@ struct LightHitSample {
     float cam_pdf_fwd;
     vec3 cam_hit_pos;
     float cam_pdf_rev;
+    vec3 cam_hit_normal;
     float sampling_pdf_emit;
     uint material_idx;
     // side not needed, sample is always on diffuse surface
@@ -609,6 +610,7 @@ struct SceneDesc {
 	uint64_t light_vertices_addr;
 	uint64_t temporal_light_origin_reservoirs_addr;
 	uint64_t light_transfer_addr;
+	uint64_t spatial_light_origin_reservoirs_addr;
 };
 
 struct Desc2 {

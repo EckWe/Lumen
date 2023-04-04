@@ -74,7 +74,7 @@ bool generate_light_sample_for_hit_resampling(in float eta_vc, out VCMState ligh
     float pdf_direct, pdf_dir;
     float cos_theta;
 
-    const vec3 Le = sample_light_Le(
+    vec3 Le = sample_light_Le(
         seed, pc_ray.num_lights, pc_ray.light_triangle_count, cos_theta,
         light_record, pos, wi, pdf_pos, pdf_dir, pdf_emit, pdf_direct, pc_ray.num_textures);
 
@@ -250,9 +250,11 @@ vec3 vcm_connect_light_vertices(uint light_path_len, in uint light_path_idx,
                                 bool side, float eta_vm, in VCMState camera_state,
                                 float pdf_rev) {
     vec3 res = vec3(0);
-    vec3 test = vec3(0);
+    
+	//return vec3(light_path_len) / 10;
     //return light_vtx(light_path_idx).throughput;
     //return vec3(light_path_idx);
+	
     //test = cam_hit_pos_1;
     //return light_vtx(light_path_idx).n_s;
     //for (int i = 0; i < 1; i++) {
@@ -272,6 +274,10 @@ vec3 vcm_connect_light_vertices(uint light_path_len, in uint light_path_idx,
         const float cos_cam = dot(n_s, dir);
         const float cos_light = dot(light_vtx(light_path_idx + i).n_s, -dir);
         const float G = cos_light * cos_cam / len_sqr;
+
+
+        //return vec3(G) * 200;
+        //return light_vtx(light_path_idx + i).n_s;
         
         if (G > 0) {
             
@@ -307,11 +313,16 @@ vec3 vcm_connect_light_vertices(uint light_path_len, in uint light_path_idx,
                 const bool visible = any_hit_payload.hit == 0;
                 if (visible) {
                     //res = vec3(1);
-                    if(i == 0)
+					//if (i == 0) //res += vec3(G) * 2000;
+						// camera_state.throughput;
+						res += mis_weight * G
+					*light_vtx(light_path_idx + i).throughput
+					*camera_state.throughput* f_cam* f_light;
+						
+						
+					//}
                         //res += light_vtx(light_path_idx + i).throughput;
-                        res += mis_weight * G * camera_state.throughput *
-                          light_vtx(light_path_idx + i).throughput * f_cam *
-                          f_light;
+                        
                     //res += vec3(f_cam);
                     //res += light_vtx(light_path_idx + i).n_s; //vec3(mis_weight);
                     //res = vec3(res.x, 0, light_vtx(light_path_idx + i).d_vc);
@@ -875,6 +886,7 @@ void vcm_fill_light(vec3 origin, VCMState vcm_state, bool finite_light,
     int depth;
     int path_idx = 0;
     bool specular = false;
+	//light_path_cnts.d[pixel_idx] = 1;
     light_vtx(path_idx).path_len = 0;
     for (depth = 1;; depth++) {
         traceRayEXT(tlas, flags, 0xFF, 0, 0, 0, vcm_state.pos, tmin,
@@ -998,7 +1010,7 @@ void vcm_fill_light(vec3 origin, VCMState vcm_state, bool finite_light,
         vcm_state.area = payload.area;
         vcm_state.material_idx = payload.material_idx;
     }
-    light_path_cnts.d[pixel_idx] = path_idx;
+	light_path_cnts.d[pixel_idx] = path_idx;
 }
 #undef light_vtx
 
@@ -1028,7 +1040,7 @@ vec3 vcm_trace_eye(VCMState camera_state, float eta_vcm, float eta_vc,
         
 
         if (payload.material_idx == -1) {
-            //if(depth==2)
+            //if(depth==1)
                 //col += camera_state.throughput * get_environment_radiance(camera_state, depth, pc_ray.world_radius, pc_ray.num_textures);//pc_ray.sky_col;
             //if (gl_LaunchIDEXT.x == 600 && gl_LaunchIDEXT.y == 300)
             //debugPrintfEXT("%f, %f, %f ..  \n", s.wi.x, s.wi.y, s.wi.z);
@@ -1077,23 +1089,31 @@ vec3 vcm_trace_eye(VCMState camera_state, float eta_vcm, float eta_vc,
         float pdf_rev;
         vec3 f;
         if (!mat_specular && depth < pc_ray.max_depth) {
+			//if (depth ==1)
             //col += vcm_connect_light(n_s, wo, mat, side, eta_vm, camera_state,
-            //                         pdf_rev, f);
+                                    //pdf_rev, f);
             vcm_connect_light(n_s, wo, mat, side, eta_vm, camera_state,
                                      pdf_rev, f);
         }
         
         // Connect to light vertices
         if (!mat_specular) {
+
+            /* if (light_path_len == 0) {
+				return vec3(1,0,0);
+			} else {
+				return vec3(1);
+			}*/
             //if(depth == 2)
+            // 
                 //col = camera_state.pos;
             vec3 connect = vcm_connect_light_vertices(light_path_len, light_path_idx,
                                               depth, n_s, wo, mat, side, eta_vm,
                                               camera_state, pdf_rev);
-            if(depth == 1) {
+            //if(depth == 1) {
                 col += connect;
                 //return vcm_lights.d[light_path_idx].pos;
-            }
+            //}
                 //return vcm_lights.d[light_path_idx].pos;
             //}
         }
