@@ -69,6 +69,7 @@ void init_light_hit_sample(out LightHitSample s) {
     s.light_pdf_fwd, s.light_pdf_rev, s.cam_pdf_fwd, s.cam_pdf_rev = 0.f;
     s.d_vcm, s.d_vc, s.d_vm, s.area, s.mis_weight = 0.f;
     s.material_idx = -1;
+    s.cam_hit_pos = vec3(0);
 }
 
 float target_function(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_hit_normal, 
@@ -89,7 +90,7 @@ float target_function(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_
     dir /= len;
     const float cos_cam = dot(cam_hit_normal, dir);
     const float cos_light = dot(light_hit_normal, -dir);
-    // TODO G stays the same only when cam hit is the same -> spatial resampling has to adjust G, jacobian factor?
+    
     const float G = cos_light * cos_cam / len_sqr;
 
     if (G > 0) {
@@ -106,8 +107,6 @@ float target_function(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_
                         -light_hit_wi, mat, 0,
                         false, -dir,
                         light_pdf_fwd, light_pdf_rev, cos_light);
-        //vec3 f_light = vec3(1);
-        //vec3 f_cam = vec3(1);
         
         if (f_light != vec3(0) && f_cam != vec3(0)) {
             cam_pdf_fwd *= abs(cos_light) / len_sqr;
@@ -120,8 +119,6 @@ float target_function(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_
             const float w_camera = 
                 light_pdf_fwd *
                 (camera_state.d_vcm + pdf_rev * camera_state.d_vc);
-            //float w_light = 1;
-            //float w_camera = 1;
 
             
             bool visible = true;
@@ -138,77 +135,6 @@ float target_function(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_
             if (visible) {
                 mis_weight = 1. / (1 + w_light + w_camera);
                 L_connect = G * camera_state.throughput * f_light * light_throughput * f_cam;
-                result = luminance(L_connect) * mis_weight;
-            }
-        }
-    }
-    return result;
-}
-
-float target_function2(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_hit_normal, 
-                        in vec3 cam_hit_normal, in vec3 light_throughput, out vec3 L_connect, in vec3 wo, in Material mat,
-                        in uint light_mat_idx, in vec2 light_mat_uv, in vec3 light_hit_wi, in VCMState camera_state, in float light_d_vcm, in float light_d_vc, in bool check_vis, out float mis_weight) {
-    
-    float result = 0;
-    L_connect = vec3(0);
-    mis_weight = 0;
-    if (light_mat_idx == -1) {
-        return 0.f;
-    }
-    const Material light_mat = load_material(light_mat_idx, light_mat_uv);
-    // connect vertices
-    vec3 dir = light_hit_pos - cam_hit_pos;
-    const float len = length(dir);
-    const float len_sqr = len * len;
-    dir /= len;
-    const float cos_cam = dot(cam_hit_normal, dir);
-    const float cos_light = dot(light_hit_normal, -dir);
-    // TODO G stays the same only when cam hit is the same -> spatial resampling has to adjust G, jacobian factor?
-    const float G = cos_light * cos_cam / len_sqr;
-
-    if (G > 0) {
-        float cam_pdf_fwd, light_pdf_fwd, light_pdf_rev, pdf_rev;
-        const vec3 f_cam =
-            eval_bsdf(cam_hit_normal, wo, mat, 1, false, dir, cam_pdf_fwd, pdf_rev, cos_cam);
-            
-        //const Material light_mat =
-          //  load_material(light_first_hit.material_idx,
-            //                light_first_hit.uv);
-
-        const vec3 f_light =
-            eval_bsdf(light_hit_normal,
-                        -light_hit_wi, mat, 0,
-                        false, -dir,
-                        light_pdf_fwd, light_pdf_rev, cos_light);
-        
-        if (f_light != vec3(0) && f_cam != vec3(0)) {
-            cam_pdf_fwd *= abs(cos_light) / len_sqr;
-            light_pdf_fwd *= abs(cos_cam) / len_sqr;
-
-            const float w_light =
-                cam_pdf_fwd *
-                (light_d_vcm +
-                    light_pdf_rev * light_d_vc);
-            const float w_camera = 
-                light_pdf_fwd *
-                (camera_state.d_vcm + pdf_rev * camera_state.d_vc);
-
-
-            
-            bool visible = true;
-            if (check_vis) {
-                const vec3 ray_origin = offset_ray2(cam_hit_pos, cam_hit_normal);
-                any_hit_payload.hit = 1;
-                traceRayEXT(tlas,
-                            gl_RayFlagsTerminateOnFirstHitEXT |
-                                gl_RayFlagsSkipClosestHitShaderEXT,
-                            0xFF, 1, 0, 1, ray_origin, 0, dir, len - EPS, 1);
-                visible = any_hit_payload.hit == 0;
-            }
-
-            if (visible) {
-                mis_weight = 1. / (1 + w_light + w_camera);
-                L_connect = G * camera_state.throughput * f_cam * f_light * light_throughput;
                 result = luminance(L_connect) * mis_weight;
             }
         }
@@ -277,25 +203,6 @@ vec3 resample_light_hit(in VCMState camera_state, inout VCMState light_first_hit
     }
     const vec3 camera_hit_position = payload.pos;
 
-    /*vec4 prev_pos = ubo.prev_view * vec4(camera_hit_position, 1.f);
-    prev_pos /= prev_pos.z;
-    prev_pos = -ubo.prev_projection * prev_pos;
-    const vec2 prev_ndc = prev_pos.xy;
-    vec2 prev_coords = vec2(0.5f * (1.f + prev_ndc) * vec2(pc_ray.size_x, pc_ray.size_y));*/
-    
-
-
-
-    //return vec3((abs(gl_LaunchIDEXT.x - float(prev_coords.x))*5.f)/gl_LaunchSizeEXT.x, (abs(gl_LaunchIDEXT.y -float(prev_coords.y))*5.f)/gl_LaunchSizeEXT.y, 0);
-    //return vec3(float(prev_coords.x) /gl_LaunchSizeEXT.x, float(prev_coords.y) / gl_LaunchSizeEXT.y, 0);
-    //return vec3(abs(current_ndc.xyz-payload.pos));
-    /*if(gl_LaunchIDEXT.x > 800) {
-        return vec3(float(prev_coords.x) /gl_LaunchSizeEXT.x, float(prev_coords.y) / gl_LaunchSizeEXT.y, 0);
-    } else {
-        return vec3(float(abs(float(prev_coords.x) - gl_LaunchIDEXT.x)*5.f) /gl_LaunchSizeEXT.x, float(abs(float(prev_coords.y) - gl_LaunchIDEXT.y)*5.f) / gl_LaunchSizeEXT.y, 0);
-    }*/
-    //return vec3(abs(payload.dist - length(payload.pos - ubo.view_pos.xyz)));
-    
 
     vec3 wo = camera_state.pos - payload.pos;
     float dist = length(payload.pos - camera_state.pos);
@@ -371,73 +278,7 @@ vec3 resample_light_hit(in VCMState camera_state, inout VCMState light_first_hit
 
         light_hit_sample.L_connect = light_first_hit.throughput;
 
-        //L_connect_complete /= sampling_pdf_emit;
-        // connect vertices
-        /*vec3 dir = light_first_hit.pos - payload.pos;
-        const float len = length(dir);
-        const float len_sqr = len * len;
-        dir /= len;
-        const float cos_cam = dot(n_s, dir);
-        const float cos_light = dot(light_first_hit.n_s, -dir);
-        // TODO G stays the same only when cam hit is the same -> spatial resampling has to adjust G, jacobian factor?
-        const float G = cos_light * cos_cam / len_sqr;
         
-        if (G > 0) {
-            float cam_pdf_fwd, light_pdf_fwd, light_pdf_rev, pdf_rev;
-            const vec3 f_cam =
-                eval_bsdf(n_s, wo, mat, 1, side, dir, cam_pdf_fwd, pdf_rev, cos_cam);
-                
-            const Material light_mat =
-                load_material(light_first_hit.material_idx,
-                                light_first_hit.uv);
-
-            const vec3 f_light =
-                eval_bsdf(light_first_hit.n_s,
-                            -light_first_hit.wi, light_mat, 0,
-                            false, -dir,
-                            light_pdf_fwd, light_pdf_rev, cos_light);
-            
-
-
-            if (f_light != vec3(0) && f_cam != vec3(0)) {
-                cam_pdf_fwd *= abs(cos_light) / len_sqr;
-                light_pdf_fwd *= abs(cos_cam) / len_sqr;
-
-                light_hit_sample.cam_pdf_fwd = cam_pdf_fwd;
-                light_hit_sample.light_pdf_fwd = light_pdf_fwd;
-                light_hit_sample.light_pdf_rev = light_pdf_rev;
-                light_hit_sample.cam_pdf_rev = pdf_rev;
-
-                const float w_light =
-                    cam_pdf_fwd *
-                    (light_first_hit.d_vcm +
-                        light_pdf_rev * light_first_hit.d_vc);
-                const float w_camera = 
-                    light_pdf_fwd *
-                    (camera_state.d_vcm + pdf_rev * camera_state.d_vc);
-                // TODO double check if w_camera really isn't needed
-                const float mis_weight = 1. / (1 + w_light);
-                // TODO check validity of offset function
-                const vec3 ray_origin = offset_ray2(payload.pos, n_s);
-                
-                any_hit_payload.hit = 1;
-                traceRayEXT(tlas,
-                            gl_RayFlagsTerminateOnFirstHitEXT |
-                                gl_RayFlagsSkipClosestHitShaderEXT,
-                            0xFF, 1, 0, 1, ray_origin, 0, dir, len - EPS, 1);
-                const bool visible = any_hit_payload.hit == 0;
-                if (visible) {
-                    
-                    light_hit_sample.L_connect =  G * //camera_state.throughput *
-                            light_first_hit.throughput * //f_cam *
-                            f_light;
-                        //light_hit_sample.L_connect = vec3(1, 0, 0);    
-                    // complete sample aka wi for resampling
-                    light_hit_sample.mis_weight = mis_weight;
-                    L_connect_complete = luminance(light_hit_sample.L_connect) * mis_weight / sampling_pdf_emit;
-                }
-            }
-        }*/
     }
     const uint pixels = pc_ray.size_x * pc_ray.size_y;
     const uint ping_pong_offset = pc_ray.total_frame_num % 2 == 0 ? pixels : 0;
@@ -452,7 +293,8 @@ vec3 resample_light_hit(in VCMState camera_state, inout VCMState light_first_hit
         init_light_hit_reservoir(lhr);
     }
     else {
-        vec4 prev_pos = ubo.prev_view * vec4(light_hit_sample.cam_hit_pos, 1.f);
+        // TODO is this camhit pos always right?? sample could be from totally different cam hit
+        vec4 prev_pos = ubo.prev_view * vec4(camera_hit_position, 1.f);
         prev_pos /= prev_pos.z;
         prev_pos = -ubo.prev_projection * prev_pos;
         const vec2 prev_ndc = prev_pos.xy;

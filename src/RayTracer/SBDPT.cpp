@@ -39,6 +39,18 @@ void SBDPT::init() {
 							VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE,
 							2 * instance->width * instance->height * sizeof(LightHitReservoir));
 
+	light_vertices_reservoirs.create("Light Vertices Reservoirs", &instance->vkb.ctx,
+							VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+								VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+							VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE,
+							2 * instance->width * instance->height * (lumen_scene->config.path_length + 1) * sizeof(VCMVertex));
+	light_path_reservoirs.create("Light Path Reservoirs", &instance->vkb.ctx,
+											VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+												VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+												VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+											VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_SHARING_MODE_EXCLUSIVE,
+											2 * instance->width * instance->height * sizeof(LightPathReservoir));
+
 	SceneDesc desc;
 	desc.vertex_addr = vertex_buffer.get_device_address();
 	desc.index_addr = index_buffer.get_device_address();
@@ -54,6 +66,8 @@ void SBDPT::init() {
 	desc.temporal_light_origin_reservoirs_addr = temporal_light_origin_reservoirs.get_device_address();
 	desc.light_transfer_addr = light_transfer_buffer.get_device_address();
 	desc.spatial_light_origin_reservoirs_addr = spatial_light_origin_reservoirs.get_device_address();
+	desc.light_vertices_reservoirs_addr = light_vertices_reservoirs.get_device_address();
+	desc.light_path_reservoirs_addr = light_path_reservoirs.get_device_address();
 
 	scene_desc_buffer.create(
 		&instance->vkb.ctx, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
@@ -75,6 +89,10 @@ void SBDPT::init() {
 	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, light_transfer_addr, &light_transfer_buffer, instance->vkb.rg);
 	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, spatial_light_origin_reservoirs_addr,
 								 &spatial_light_origin_reservoirs, instance->vkb.rg);
+	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, light_vertices_reservoirs_addr, &light_vertices_reservoirs_buffer,
+								 instance->vkb.rg);
+	REGISTER_BUFFER_WITH_ADDRESS(SceneDesc, desc, light_path_reservoirs_addr, &light_path_reservoirs_buffer,
+								 instance->vkb.rg);
 }
 
 void SBDPT::render() {

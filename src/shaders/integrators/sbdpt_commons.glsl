@@ -106,8 +106,8 @@ bool generate_light_sample_for_hit_resampling(in float eta_vc, out VCMState ligh
 }
 
 // TODO test if pdf are right, check if we have to divide by lightPickProb
-bool vcm_generate_light_sample(float eta_vc, out VCMState light_state,
-                               out bool finite) {
+bool generate_light_sample(float eta_vc, out VCMState light_state,
+                               out bool finite, out float pdf_emit) {
     // Sample light
     uint light_idx;
     uint light_triangle_idx;
@@ -115,7 +115,7 @@ bool vcm_generate_light_sample(float eta_vc, out VCMState light_state,
     vec2 uv_unused;
     LightRecord light_record;
     vec3 wi, pos;
-    float pdf_pos, pdf_dir, pdf_emit, pdf_direct;
+    float pdf_pos, pdf_dir, pdf_direct;
     float cos_theta;
 
     const vec3 Le = sample_light_Le(
@@ -129,8 +129,12 @@ bool vcm_generate_light_sample(float eta_vc, out VCMState light_state,
     light_state.area = 1.0 / pdf_pos;
     light_state.wi = wi;
     //light_state.throughput = Le * cos_theta / (pdf_dir * pdf_pos);
-    light_state.throughput = Le * cos_theta / pdf_emit;
 
+
+    light_state.throughput = Le * cos_theta;
+//#ifdef NO_RESAMPLING
+    light_state.throughput /= pdf_emit;
+//#endif
     // Partially evaluate pdfs (area formulation)
     // At s = 0 this is p_rev / p_fwd, in the case of area lights:
     // p_rev = p_connect = 1/area, p_fwd = cos_theta / (PI * area)
@@ -872,8 +876,8 @@ void fill_light_continued(vec3 origin, VCMState vcm_state, bool finite_light,
 #undef light_vtx
 
 
-void vcm_fill_light(vec3 origin, VCMState vcm_state, bool finite_light,
-                     float eta_vcm, float eta_vc, float eta_vm) {
+void fill_light(vec3 origin, VCMState vcm_state, bool finite_light,
+                     float eta_vcm, float eta_vc, float eta_vm, in float pdf_emit) {
 #define light_vtx(i) vcm_lights.d[vcm_light_path_idx + i]
     const vec3 cam_pos = origin;
     const vec3 cam_nrm = vec3(-ubo.inv_view * vec4(0, 0, 1, 0));
@@ -937,10 +941,12 @@ void vcm_fill_light(vec3 origin, VCMState vcm_state, bool finite_light,
             light_vtx(path_idx).throughput = vcm_state.throughput;
             light_vtx(path_idx).d_vcm = vcm_state.d_vcm;
             light_vtx(path_idx).d_vc = vcm_state.d_vc;
-            
             light_vtx(path_idx).d_vm = vcm_state.d_vm;
             light_vtx(path_idx).path_len = depth + 1;
             light_vtx(path_idx).side = uint(side);
+            // add resampling necessary data
+            light_vtx(path_idx).n_g = n_g;
+            light_vtx(path_idx).pdf_emit = pdf_emit;
             path_idx++;
         }
         if (depth >= pc_ray.max_depth) {
@@ -958,9 +964,8 @@ void vcm_fill_light(vec3 origin, VCMState vcm_state, bool finite_light,
             if (luminance(splat_col) > 0) {
                 uint idx = coords.x * gl_LaunchSizeEXT.y +
                         coords.y;
-                // TODO REENABLE
-                //if(depth == 1)
-                    //tmp_col.d[idx] += splat_col;
+                    // TODO REENABLE
+                    tmp_col.d[idx] += splat_col;
             }
 //#endif
         }

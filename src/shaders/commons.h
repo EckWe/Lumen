@@ -218,6 +218,7 @@ struct VCMVertex {
     vec3 wi;
     vec3 wo;
     vec3 n_s;
+    vec3 n_g;
     vec3 pos;
     vec2 uv;
     vec3 throughput;
@@ -229,7 +230,8 @@ struct VCMVertex {
     float d_vm;
     uint side;
     uint coords;
-	float pad;
+    // TODO doesn't need to be here, all vertex of path have same pdf_emit
+	float pdf_emit;
 };
 
 struct SPPMData {
@@ -514,6 +516,7 @@ struct LightSpawnReservoir {
 
 struct LightHitReservoir {
     LightHitSample light_hit_sample;
+    vec3 prev_cam_hit_pos;
     uint M;
 	float W;
     float test;
@@ -531,6 +534,35 @@ struct LightTransferState {
     float d_vcm;
     float d_vc;
     float d_vm;
+};
+
+struct LightPathReservoir {
+    // TODO hardcoded array size change to depth needed
+    // TODO is in bdpt path length 6 3 cam/3 light vertices or 6/6 ?
+    vec3 cam_hit_pos;
+    uint M;
+    vec3 cam_hit_normal;
+    float W;
+    //reservoir samples are in extra buffer
+    uint path_vertex_count;
+};
+
+struct LightSampleVertex {
+    // TODO wi needed?
+    vec3 wi;
+    float sampling_pdf_emit;
+    vec3 n_s;
+    float area;
+    vec3 n_g;
+    float d_vcm;
+    vec3 light_hit_pos;
+    float d_vc;
+    vec3 throughput;
+    float d_vm;
+    vec2 uv;
+    uint material_idx;
+    // TODO test if needed
+    float padding;
 };
 
 
@@ -611,6 +643,9 @@ struct SceneDesc {
 	uint64_t temporal_light_origin_reservoirs_addr;
 	uint64_t light_transfer_addr;
 	uint64_t spatial_light_origin_reservoirs_addr;
+
+    uint64_t light_vertices_reservoirs_addr;
+    uint64_t light_path_reservoirs_addr;
 };
 
 struct Desc2 {

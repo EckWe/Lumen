@@ -419,8 +419,9 @@ void main() {
     fill_light_continued(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm);
 #endif
 #ifndef TEMP_RESAMPLING
-    vcm_generate_light_sample(eta_vc, vcm_state, finite);
-    vcm_fill_light(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm);
+    float pdf_emit;
+    generate_light_sample(eta_vc, vcm_state, finite, pdf_emit);
+    fill_light(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm, pdf_emit);
 #endif
     /*if (gl_LaunchIDEXT.x == 116 && gl_LaunchIDEXT.y == 40){
         //debugPrintfEXT("gen0: %f, %f, %f ... %f, %f \n", col.x, col.y, col.z, vcm_state.d_vc, vcm_state.d_vcm);

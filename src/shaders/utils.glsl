@@ -28,7 +28,6 @@ struct VCMState {
     vec3 n_s;
     float d_vcm;
     vec3 pos;
-    
     float d_vc;
     vec3 throughput;
     float d_vm;

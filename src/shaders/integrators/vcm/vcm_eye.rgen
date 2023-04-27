@@ -78,7 +78,7 @@ void main() {
         return;
     }
     vec3 splat_img = tmp_col.d[pixel_idx];
-    //col += splat_img;
+    col = splat_img;
     tmp_col.d[pixel_idx] = vec3(0);
 #undef light_vtx
     if (pc_ray.frame_num > 1) {
