@@ -271,6 +271,7 @@
     <ClCompile Include="src\Framework\Texture.cpp" />
     <ClCompile Include="src\RayTracer\ReSTIR.cpp" />
     <ClCompile Include="src\RayTracer\ReSTIRGI.cpp" />
+    <ClCompile Include="src\RayTracer\SBDPT.cpp" />
     <ClCompile Include="src\RayTracer\SMLT.cpp" />
     <ClCompile Include="src\RayTracer\SPPM.cpp" />
     <ClCompile Include="src\RayTracer\VCM.cpp" />
@@ -320,6 +321,7 @@
     <ClInclude Include="src\Framework\Texture.h" />
     <ClInclude Include="src\RayTracer\ReSTIR.h" />
     <ClInclude Include="src\RayTracer\ReSTIRGI.h" />
+    <ClInclude Include="src\RayTracer\SBDPT.h" />
     <ClInclude Include="src\RayTracer\SMLT.h" />
     <ClInclude Include="src\RayTracer\SPPM.h" />
     <ClInclude Include="src\RayTracer\VCM.h" />
@@ -366,6 +368,17 @@
     <None Include="src\shaders\integrators\restir\restir_commons.glsl" />
     <None Include="src\shaders\integrators\restir\spatial_pass.rgen" />
     <None Include="src\shaders\integrators\restir\temporal_pass.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\init_spawn_reservoirs.comp" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_eye.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_gi_temporal_reuse.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light_first.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light_path_resample.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light_path_resample_spatial.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light_spatial.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_resampling_commons.glsl" />
+    <None Include="src\shaders\integrators\sbdpt_commons.glsl" />
     <None Include="src\shaders\integrators\smlt\smlt_commons.glsl" />
     <None Include="src\shaders\integrators\smlt\smlt_mutate_eye.rgen" />
     <None Include="src\shaders\integrators\smlt\smlt_mutate_light.rgen" />

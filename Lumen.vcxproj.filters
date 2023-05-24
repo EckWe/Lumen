@@ -138,6 +138,12 @@
     <ClCompile Include="src\RayTracer\ReSTIR.cpp">
       <Filter>RayTracer</Filter>
     </ClCompile>
+    <ClCompile Include="src\Framework\EnvMap.cpp">
+      <Filter>Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="src\RayTracer\SBDPT.cpp">
+      <Filter>RayTracer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\LumenPCH.h" />
@@ -279,6 +285,12 @@
     <ClInclude Include="src\RayTracer\ReSTIR.h">
       <Filter>RayTracer</Filter>
     </ClInclude>
+    <ClInclude Include="src\Framework\EnvMap.h">
+      <Filter>Framework</Filter>
+    </ClInclude>
+    <ClInclude Include="src\RayTracer\SBDPT.h">
+      <Filter>RayTracer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\integrators\bdpt\bdpt.rgen">
@@ -330,9 +342,6 @@
       <Filter>Shaders\VCM</Filter>
     </None>
     <None Include="src\shaders\integrators\vcm\vcm_sample.rgen">
-      <Filter>Shaders\VCM</Filter>
-    </None>
-    <None Include="src\shaders\integrators\vcm\vcm_spawn_light.rgen">
       <Filter>Shaders\VCM</Filter>
     </None>
     <None Include="src\shaders\integrators\mlt_commons.glsl">
@@ -536,6 +545,42 @@
     <None Include="src\shaders\utils.glsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_eye.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt_commons.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\vcm\vcm_spawn_light.rgen">
+      <Filter>Shaders\VCM</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\init_spawn_reservoirs.comp">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light_first.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light_spatial.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light_path_resample.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_resampling_commons.glsl">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_light_path_resample_spatial.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_gi_temporal_reuse.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework">
@@ -585,6 +630,9 @@
     </Filter>
     <Filter Include="Shaders\RMSE">
       <UniqueIdentifier>{4ded08bd-52d4-4776-83f3-84ac25c2144d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders\SBDPT">
+      <UniqueIdentifier>{89eaad34-4aa6-49b9-8ca8-c6867e146edc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
