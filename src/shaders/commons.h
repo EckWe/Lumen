@@ -358,6 +358,8 @@ struct ReservoirSample {
     vec3 L_o;
     vec3 f;
 	float depth_v;
+    vec2 uv_v;
+    vec2 pad2;
 };
 
 struct Reservoir {
@@ -516,7 +518,7 @@ struct LightSpawnReservoir {
 
 struct LightHitReservoir {
     LightHitSample light_hit_sample;
-    vec3 prev_cam_hit_pos;
+    //vec3 prev_cam_hit_pos;
     uint M;
 	float W;
     float test;

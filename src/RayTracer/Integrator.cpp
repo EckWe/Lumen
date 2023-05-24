@@ -135,7 +135,9 @@ void Integrator::init() {
 	};
 
 	if (!lumen_scene->textures.size()) {
-		add_default_texture();
+		if (lumen_scene->env_tex == "") {
+			add_default_texture();
+		}	
 	} else {
 		diffuse_textures.resize(lumen_scene->textures.size());
 		int i = 0;

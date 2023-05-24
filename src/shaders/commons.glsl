@@ -194,7 +194,9 @@ TriangleRecord sample_area_light(const vec4 rands, const int num_lights,
     PrimMeshInfo pinfo = prim_info[light.prim_mesh_idx];
     material_idx = pinfo.material_index;
     triangle_idx = uint(rands.y * light.num_triangles);
-    return sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix);
+    TriangleRecord result = sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix);
+    result.triangle_pdf /= light.num_triangles;
+    return result;
 }
 
 TriangleRecord sample_area_light(const vec4 rands, const int num_lights,
@@ -205,8 +207,10 @@ TriangleRecord sample_area_light(const vec4 rands, const int num_lights,
     material_idx = pinfo.material_index;
     // triangle_idx = 6;
     triangle_idx = uint(rands.y * light.num_triangles);
-    return sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix, u,
+    TriangleRecord result =  sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix, u,
                            v);
+    result.triangle_pdf /= light.num_triangles;
+    return result;
 }
 
 TriangleRecord sample_area_light_with_idx(const vec4 rands,
@@ -216,7 +220,9 @@ TriangleRecord sample_area_light_with_idx(const vec4 rands,
                                           out uint material_idx) {
     PrimMeshInfo pinfo = prim_info[light.prim_mesh_idx];
     material_idx = pinfo.material_index;
-    return sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix);
+    TriangleRecord result = sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix);
+    result.triangle_pdf /= light.num_triangles;
+    return result;
 }
 
 TriangleRecord sample_area_light(const vec4 rands, const Light light,
@@ -225,8 +231,10 @@ TriangleRecord sample_area_light(const vec4 rands, const Light light,
     PrimMeshInfo pinfo = prim_info[light.prim_mesh_idx];
     material_idx = pinfo.material_index;
     triangle_idx = uint(rands.y * light.num_triangles);
-    return sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix, u,
+    TriangleRecord result = sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix, u,
                            v);
+    result.triangle_pdf /= light.num_triangles;
+    return result;
 }
 
 TriangleRecord sample_area_light(const vec4 rands, const Light light,
@@ -234,13 +242,17 @@ TriangleRecord sample_area_light(const vec4 rands, const Light light,
     PrimMeshInfo pinfo = prim_info[light.prim_mesh_idx];
     material_idx = pinfo.material_index;
     triangle_idx = uint(rands.y * light.num_triangles);
-    return sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix);
+    TriangleRecord result = sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix);
+    result.triangle_pdf /= light.num_triangles;
+    return result;
 }
 
 TriangleRecord sample_area_light(const vec4 rands, const Light light) {
     PrimMeshInfo pinfo = prim_info[light.prim_mesh_idx];
     uint triangle_idx = uint(rands.y * light.num_triangles);
-    return sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix);
+    TriangleRecord result = sample_triangle(pinfo, rands.zw, triangle_idx, light.world_matrix);
+    result.triangle_pdf /= light.num_triangles;
+    return result;
 }
 
 vec3 uniform_sample_cone(vec2 uv, float cos_max) {
@@ -250,6 +262,26 @@ vec3 uniform_sample_cone(vec2 uv, float cos_max) {
     return vec3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
 }
 
+vec3 uniform_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 wi, out float wi_len, in int texture_offset) {
+
+    // Uniform sample sphere to get direction - pbrt
+	/*float z = 1.f - 2.f * rands_pos.x;
+	float r = sqrt(max(0.f, 1.f - z * z));
+	float phi = 2 * PI * rands_pos.y;
+	wi = normalize(vec3(r * cos(phi), r * sin(phi), z));*/
+    vec2 uv = rands_pos;
+
+    wi = latlong_to_dir(uv);
+	wi_len = 10000; // TODO check world radius or inf light
+	pdf = 1.f / (2.f * PI2);
+	//vec2 uv = dir_to_latlong(wi);
+
+	vec3 env_col = texture(scene_textures[texture_offset - 1],uv).xyz;
+
+	return env_col;
+
+}
+
 // TODO double check even spherical direction distribution
 // hardcoded for warped spherical environment map in resolution 4096x2048 - here 512x256 is used for importance sampling
 vec3 importance_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 wi, out float wi_len, in int texture_offset) {
@@ -257,6 +289,7 @@ vec3 importance_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 w
 	vec2 rnd = rands_pos;
 	ivec2 pos = ivec2(0, 0);
 	int tex_array_offset = texture_offset;
+    // hardcoded
 	int top_mip_level = 9;
 
 	// aspect ratio of envmap is 2:1, first decide left/right on level 1 (2 by 1 pixels)
@@ -311,8 +344,10 @@ vec3 importance_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 w
 		pos += offset;
 	}
 	vec2 final_pos = pos + rnd;
-	vec2 uv = final_pos / vec2(512, 256);
-
+    // hardcoded
+	//vec2 uv = final_pos / vec2(4096, 2048);
+    vec2 uv = final_pos / vec2(512, 256);
+    //vec2 uv = final_pos / vec2(64, 32);
 	wi = latlong_to_dir(uv);
 	// TODO double check
 	wi_len = 10000;
@@ -608,7 +643,7 @@ vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
         n = record.n_s;
         L = light_mat.emissive_factor;
         cos_from_light = max(dot(record.n_s, wi), 0);
-        pdf_pos_a = record.triangle_pdf;
+        pdf_pos_a = record.triangle_pdf; // light.num_triangles;
         pdf_dir_w = (dot(wi, record.n_s)) / PI;
         pdf_emit_w = pdf_pos_a * pdf_dir_w;
         pdf_direct_a = pdf_pos_a;
@@ -669,7 +704,7 @@ vec3 sample_light_Le(const vec4 rands_pos, const vec2 rands_dir,
 
         float wi_len;
         L = importance_sample_env_light(rands_pos.zw, pdf_dir_w, wi, wi_len, texture_offset);
-
+        //L = uniform_sample_env_light(rands_pos.zw, pdf_dir_w, wi, wi_len, texture_offset);
         vec3 v1, v2;
         make_coord_system(-wi, v1, v2);
         vec2 uv = concentric_sample_disk(rands_dir);

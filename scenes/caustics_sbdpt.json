@@ -1,0 +1,98 @@
+{
+    "integrator" : {
+        "type" : "sbdpt",
+		"enable_vm" : 0,
+        "radius_factor" : 0.025,
+        "path_length" : 5,
+        "sky_col" : [
+            0,0,0
+        ]
+
+    },
+
+    "bsdfs": [
+        {
+            
+            "name": "Glass",
+            "refs": [
+                "glass"
+            ],
+            "albedo": [
+                1,
+                1,
+                1
+            ],
+            "type": "diffuse"
+        },
+        {
+            "name": "Ring",
+			"texture": "wood2.jpg",
+            "refs": [
+                "ring"
+            ],
+            "albedo": [
+                1,
+                1,
+                1
+            ],
+            "type": "diffuse"
+        },
+       
+        {
+            "albedo": [
+                1,
+                1,
+                1
+            ],
+            "name": "Other Walls",
+            "refs": [
+                "left_wall",
+                "right_wall",
+                "ceiling",
+                "back_wall"
+            ],
+            "type": "diffuse"
+        },
+
+        {
+            "albedo": [
+                1,
+                1,
+                1
+            ],
+            "name": "Table",
+			
+            "refs": [
+               "table" 
+            ],
+            "type": "diffuse"
+        },
+
+        {
+            "albedo": [
+                1,
+                1,
+                1
+            ],
+            "name": "Floor",
+            "refs": [
+                "floor"
+            ],
+            "type": "diffuse"
+        }
+       
+    ],
+    "camera": {
+        "fov": 45,
+        "position": [
+            2.7,
+            0.5,
+            3.1
+        ],
+        "dir" : [
+            -1.420776,-2.158489, 2
+        ]
+    },
+    "mesh_file": "caustics.obj",
+	"environment_texture": "env_tex_room.hdr"
+}

@@ -136,6 +136,7 @@ void VCM::render() {
 	pc_ray.random_num = rand() % UINT_MAX;
 	pc_ray.max_angle_samples = max_samples;
 	pc_ray.light_triangle_count = total_light_triangle_cnt;
+	pc_ray.num_textures = lumen_scene->textures.size() + 1;
 	const glm::vec3 diam = pc_ray.max_bounds - pc_ray.min_bounds;
 	const float max_comp = glm::max(diam.x, glm::max(diam.y, diam.z));
 	const int base_grid_res = int(max_comp / pc_ray.radius);

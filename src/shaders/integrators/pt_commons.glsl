@@ -67,104 +67,10 @@ vec3 uniform_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 wi, 
 	pdf = 1.f / (2.f * PI2);
 	vec2 uv = dir_to_latlong(wi);
 	vec3 env_col = texture(scene_textures[pc_ray.num_textures],uv).xyz;
-	
-
-	/* if (gl_LaunchIDEXT.x == 300 && gl_LaunchIDEXT.y == 300) {
-		debugPrintfEXT("%f, %f, %f .. %f, %f \n", rands_pos.x, rands_pos.y, wi.z, uv.x, uv.y);
-	}*/
 
 	return env_col;
 
 }
-
-// TODO double check even spherical direction distribution
-// hardcoded for warped spherical environment map in resolution 4096x2048 - here 512x256 is used for importance sampling
-/*vec3 importance_sample_env_light(const vec2 rands_pos, out float pdf, out vec3 wi, out float wi_len) {
-
-	vec2 rnd = rands_pos;
-	ivec2 pos = ivec2(0, 0);
-	int tex_array_offset = pc_ray.num_textures;
-	int top_mip_level = 9;
-
-	// aspect ratio of envmap is 2:1, first decide left/right on level 1 (2 by 1 pixels)
-	float left = texelFetch(scene_textures[tex_array_offset + top_mip_level - 1], pos, 0).x;
-	float right = texelFetch(scene_textures[tex_array_offset + top_mip_level - 1], pos + ivec2(1, 0), 0).x;
-
-	float left_n = left / (left + right);
-	
-
-	if (rnd.x < left_n) {
-		rnd.x /= left_n;
-	} else {
-		pos.x += 1;
-		rnd.x = (rnd.x - left_n) / (1.f - left_n);
-	}
-
-	// decide on 2x2 texel position from now on
-	for (int mip = top_mip_level - 2; mip >= 0; mip--) {
-		pos *= 2;
-
-		vec4 v;
-		v.x = texelFetch(scene_textures[tex_array_offset + mip], pos, 0).x;
-		v.y = texelFetch(scene_textures[tex_array_offset + mip], pos + ivec2(1, 0), 0).x;
-		v.z = texelFetch(scene_textures[tex_array_offset + mip], pos + ivec2(0, 1), 0).x;
-		v.w = texelFetch(scene_textures[tex_array_offset + mip], pos + ivec2(1, 1), 0).x;
-
-		left = v.x + v.z;
-		right = v.y + v.w;
-
-		left_n = left / (left + right);
-
-		ivec2 offset;
-
-		if (rnd.x < left_n) {
-			offset.x = 0;
-			rnd.x = rnd.x / left_n;
-		} else {
-			offset.x = 1;
-			rnd.x = (rnd.x - left_n) / (1.f - left_n);
-		}
-
-		float upper_n = bool(offset.x) ? (v.y / right) : (v.x / left);
-
-		if (rnd.y < upper_n) {
-			offset.y = 0;
-			rnd.y = rnd.y / upper_n;
-		} else {
-			offset.y = 1;
-			rnd.y = (rnd.y - upper_n) / (1.f - upper_n);
-		}
-
-		pos += offset;
-	}
-	vec2 final_pos = pos + rnd;
-	vec2 uv = final_pos / vec2(512, 256);
-
-	wi = latlong_to_dir(uv);
-	// TODO double check
-	wi_len = 10000;
-	float avg_intensity = texelFetch(scene_textures[tex_array_offset + top_mip_level], ivec2(0, 0), 0).x;
-	pdf = texelFetch(scene_textures[tex_array_offset], pos, 0).x / avg_intensity;
-	pdf = pdf * (1 / (2.f * PI2));
-
-	vec3 result = texture(scene_textures[tex_array_offset - 1], uv).xyz;
-
-	return result;
-}
-
-vec3 importance_sample_env_light_pdf(in vec3 dir, out float pdf) {
-
-	vec2 uv = dir_to_latlong(dir);
-	// TODO not hardcoded and try original res for mip map -> change at creation
-	ivec2 pos = ivec2(uv * vec2(512, 256));
-	int tex_array_offset = pc_ray.num_textures;
-	float avg_intensity = texelFetch(scene_textures[tex_array_offset + top_mip_level], ivec2(0, 0), 0).x;
-	pdf = texelFetch(scene_textures[tex_array_offset], pos, 0).x / avg_intensity;
-	pdf = pdf * (1 / (2.f * PI2));
-
-	vec3 result = texture(scene_textures[tex_array_offset - 1], uv).xyz;
-	return result;
-}*/
 
 
 vec3 sample_env_light(const Material mat, vec3 pos, const bool side, const vec3 n_s, const vec3 wo,

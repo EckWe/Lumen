@@ -69,7 +69,7 @@ void init_light_hit_sample(out LightHitSample s) {
     s.light_pdf_fwd, s.light_pdf_rev, s.cam_pdf_fwd, s.cam_pdf_rev = 0.f;
     s.d_vcm, s.d_vc, s.d_vm, s.area, s.mis_weight = 0.f;
     s.material_idx = -1;
-    s.cam_hit_pos = vec3(0);
+    //s.cam_hit_pos = vec3(0);
 }
 
 float target_function(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_hit_normal, 
@@ -104,7 +104,7 @@ float target_function(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_
 
         const vec3 f_light =
             eval_bsdf(light_hit_normal,
-                        -light_hit_wi, mat, 0,
+                        -light_hit_wi, light_mat, 0,
                         false, -dir,
                         light_pdf_fwd, light_pdf_rev, cos_light);
         
@@ -134,8 +134,8 @@ float target_function(in vec3 light_hit_pos, in vec3 cam_hit_pos, in vec3 light_
 
             if (visible) {
                 mis_weight = 1. / (1 + w_light + w_camera);
-                L_connect = G * camera_state.throughput * f_light * light_throughput * f_cam;
-                result = luminance(L_connect) * mis_weight;
+                L_connect = mis_weight * G * camera_state.throughput * f_light * light_throughput * f_cam;
+                result = luminance(L_connect); //* mis_weight;
             }
         }
     }
@@ -153,13 +153,16 @@ void init_light_hit_reservoir(out LightHitReservoir lhr) {
     lhr.light_hit_sample = s;
 }
 
-bool update_light_hit_reservoir(inout LightHitReservoir r, inout float w_sum, in LightHitSample s, in float w_i) {
+bool update_light_hit_reservoir(inout LightHitReservoir r, inout float w_sum, in LightHitSample s, in float w_i, in vec3 cam_hit_pos, in vec3 cam_hit_normal) {
     w_sum += w_i;
     r.M++;
 
     if (rand(seed) * w_sum <= w_i) {
+        //s.cam_hit_pos = cam_hit_pos;
+        //s.cam_hit_normal = cam_hit_normal;
         r.light_hit_sample = s;
-
+        r.light_hit_sample.cam_hit_pos = cam_hit_pos;
+        r.light_hit_sample.cam_hit_normal = cam_hit_normal;
         return true;
     }
     return false;
@@ -363,11 +366,11 @@ vec3 resample_light_hit(in VCMState camera_state, inout VCMState light_first_hit
 
 
 
-    bool updated = update_light_hit_reservoir(lhr, w_sum, light_hit_sample, wi);
+    bool updated = update_light_hit_reservoir(lhr, w_sum, light_hit_sample, wi, camera_hit_position, n_s);
 
 
     w_sum /= lhr.M;
-    lhr.M = min(lhr.M, 60);
+    lhr.M = min(lhr.M, 100);
     //float current_tf = luminance(lhr.light_hit_sample.L_connect) * lhr.light_hit_sample.mis_weight;
     ts = lhr.light_hit_sample;
     
@@ -489,7 +492,7 @@ vec3 resample_light_hit(in VCMState camera_state, inout VCMState light_first_hit
     target_function(ts.light_hit_pos, camera_hit_position, ts.n_s, n_s, ts.L_connect, connect_test, wo, mat,
                             ts.material_idx, ts.uv, ts.wi, camera_state, ts.d_vcm, ts.d_vc, false, mis_weight_test);
     
-    result = connect_test * mis_weight_test * lhr.W;
+    result = connect_test * lhr.W;
 
 
 
@@ -836,8 +839,10 @@ void main() {
     float pdf_emit;
     float pdf_pos;
     generate_light_sample_for_hit_resampling(eta_vc, vcm_state, finite, pdf_emit, pdf_pos);
+    //generate_light_sample(eta_vc, vcm_state, finite, pdf_emit);
+    //vec3 col = vcm_state.throughput;
     vec3 col = fill_light_with_lighthit_resampling(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm, camera_state, pdf_emit, pdf_pos);
-
+    //col = vcm_state.throughput;
 // save state for next shader
     if (vcm_state.material_idx != -1) {
         LightTransferState lts;

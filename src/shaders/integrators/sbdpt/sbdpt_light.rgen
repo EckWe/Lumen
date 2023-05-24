@@ -401,7 +401,7 @@ void main() {
     //fill_light_with_lighthit_resampling(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm, camera_state, pdf_emit, pdf_pos);
     //vec3 col =*/
 
-//#define TEMP_RESAMPLING
+#define TEMP_RESAMPLING
 #ifdef TEMP_RESAMPLING
     LightTransferState lts = light_transfer_states.d[pixel_idx];
     vcm_state.wi = lts.wi;
@@ -439,12 +439,19 @@ void main() {
         imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
     }*/
 
+    //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(vec3(light_path_cnts.d[pixel_idx]/5), 1.f));
 
-
-    if (gl_LaunchIDEXT.x == 1589 && gl_LaunchIDEXT.y == 749){
-    //    debugPrintfEXT("pos: %f, %f, %f \n wi: %f, %f, %f \n tp: %f, %f, %f \n vcm: %f, vm: %f, vc: %f \n", vcm_state.pos.x, vcm_state.pos.y, vcm_state.pos.z, vcm_state.wi.x, vcm_state.wi.y, vcm_state.wi.z, vcm_state.throughput.x, vcm_state.throughput.y,
-    //     vcm_state.throughput.z, vcm_state.d_vcm, vcm_state.d_vm, vcm_state.d_vc);
-    }
+    //if (gl_LaunchIDEXT.x == 1589 && gl_LaunchIDEXT.y == 749){
+        //debugPrintfEXT("pos: %f, %f, %f \n wi: %f, %f, %f \n tp: %f, %f, %f \n vcm: %f, vm: %f, vc: %f \n", vcm_state.pos.x, vcm_state.pos.y, vcm_state.pos.z, vcm_state.wi.x, vcm_state.wi.y, vcm_state.wi.z, vcm_state.throughput.x, vcm_state.throughput.y,
+         //vcm_state.throughput.z, vcm_state.d_vcm, vcm_state.d_vm, vcm_state.d_vc);
+         /*if(light_path_cnts.d[pixel_idx] > 0) {
+            imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(light_vtx(0).throughput, 1.f));
+         }
+         else {
+            imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(vec3(0), 1.f));
+         }*/
+            
+    //}
     //vcm_fill_light(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm);
 #undef light_vtx
 }
