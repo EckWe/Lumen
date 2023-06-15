@@ -927,7 +927,7 @@ void main() {
     
     //col = light_hit_reservoirs_temporal.d[pixel_idx + pixels - ping_pong_offset].light_hit_sample.cam_hit_normal;
 
-    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
+    //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
     
 
     /*if (pc_ray.frame_num > 0) {

@@ -117,12 +117,14 @@ vec3 trace_eye_GI(VCMState camera_state, float eta_vcm, float eta_vc,
         camera_state.d_vm /= cos_wo;
         // Get the radiance
         if (luminance(mat.emissive_factor) > 0) {
-
-            vec3 val = camera_state.throughput *
+            //if (depth > 1)
+            vec3 val = vec3(0);
+            if (depth > 1)
+                val = camera_state.throughput *
                    vcm_get_light_radiance(mat, camera_state, depth);
 
             if (depth == 1) {
-                col += val;
+                //col += val;
             } else {
                 L_o += val;
             }
@@ -135,11 +137,11 @@ vec3 trace_eye_GI(VCMState camera_state, float eta_vcm, float eta_vc,
         float pdf_rev;
         vec3 f;
         if (!mat_specular && depth < pc_ray.max_depth) {
-			//if (depth ==1)
+			//if (depth > 1)
             vec3 val = vcm_connect_light(n_s, wo, mat, side, eta_vm, camera_state,
-                                 pdf_rev, f);
+                                pdf_rev, f);
             if (depth == 1) {
-                col += val;
+                //col += val;
             } else {
                 L_o += val;
             }
@@ -151,11 +153,13 @@ vec3 trace_eye_GI(VCMState camera_state, float eta_vcm, float eta_vc,
         if (!mat_specular) {
 
             
-            vec3 connect = vcm_connect_light_vertices(light_path_len, light_path_idx,
+            vec3 connect = vec3(0);
+            if (depth > 1)
+                connect = vcm_connect_light_vertices(light_path_len, light_path_idx,
                                               depth, n_s, wo, mat, side, eta_vm,
                                               camera_state, pdf_rev);
             if (depth == 1) {
-                col += connect;    
+                //col += connect;    
             } else {
                 L_o += connect;
             }
@@ -246,8 +250,8 @@ vec3 trace_eye_GI(VCMState camera_state, float eta_vcm, float eta_vc,
     samples.d[pixel_idx].depth_v = ray_depth;
     samples.d[pixel_idx].uv_v = uv_v;
 
-    
-    return col;
+    //return col;
+    return L_o;
 }
 
 void main() {
@@ -289,30 +293,38 @@ void main() {
 
 
     
-//#define GI_RESAMPLING
+#define GI_RESAMPLING
 #ifdef GI_RESAMPLING
     col = trace_eye_GI(camera_state, eta_vcm, eta_vc, eta_vm);
 #else
     col = vcm_trace_eye(camera_state, eta_vcm, eta_vc, eta_vm);
+
+    if (isnan(luminance(col))) {
+        col = vec3(0);
+    }
+    
+    vec3 splat_img = tmp_col.d[pixel_idx];
+    // TODO reenable to add t=1
+    col += splat_img;
+    tmp_col.d[pixel_idx] = vec3(0);
+
+
+    if (pc_ray.frame_num > 1) {
+        /*if (pc_ray.frame_num > 2) {
+
+        }
+        else {*/
+            float w = 1. / float(pc_ray.frame_num);
+            vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
+            imageStore(image, ivec2(gl_LaunchIDEXT.xy),
+                   vec4(mix(old_col, col, w), 1.f));
+        //}
+    } else {
+        imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
+    }
+    //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
 #endif
 
 
     
-    
-    vec3 splat_img = tmp_col.d[pixel_idx];
-    // TODO reenable to add t=1
-    //col += splat_img;
-    tmp_col.d[pixel_idx] = vec3(0);
-
-
-    /*if (pc_ray.frame_num > 1) {
-        float w = 1. / float(pc_ray.frame_num);
-        vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-        imageStore(image, ivec2(gl_LaunchIDEXT.xy),
-                   vec4(mix(old_col, col, w), 1.f));
-    } else {
-        imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
-    }*/
-    
-    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
 }

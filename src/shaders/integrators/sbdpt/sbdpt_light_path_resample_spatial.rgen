@@ -367,13 +367,14 @@ vec3 resample_light_path_spatial(VCMState camera_state) {
     spatial_reservoir.M = min(spatial_reservoir.M, M_MAX_S);
 
     light_path_cnts.d[pixel_idx] = spatial_reservoir.path_vertex_count;
+
     float p_new = target_function_path(camera_hit_position, n_s, wo, mat, camera_state, L_connect_path, true, false, spatial_reservoir.path_vertex_count, 0);
     spatial_reservoir.W = w_sum_spatial / p_new;
 
     // adjust throughput of resampled vertices
     for(int i = 0; i < spatial_reservoir.path_vertex_count; i++) {
         // sample result already in light_vtx
-        light_vtx(i).throughput *= spatial_reservoir.W*light_vtx(i).pdf_emit;
+        //light_vtx(i).throughput *= spatial_reservoir.W*light_vtx(i).pdf_emit;
     }
     
     //target_function_path(camera_hit_position, n_s, wo, mat, camera_state, L_connect_path, true, true, lpr.path_vertex_count);
@@ -426,6 +427,7 @@ void main() {
     col = resample_light_path_spatial(camera_state);
     //col = light_path_reservoirs.d[pixel_idx + pixels - ping_pong_offset].cam_hit_normal;
     //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
+    //tmp_col.d[pixel_idx] += col;
 
     /*if (pc_ray.frame_num > 1) {
         float w = 1. / float(pc_ray.frame_num);

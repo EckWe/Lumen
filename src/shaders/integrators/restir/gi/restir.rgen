@@ -42,6 +42,7 @@ void main() {
     vec4 area_int = (ubo.inv_projection * vec4(2. / gl_LaunchSizeEXT.x,
                                                2. / gl_LaunchSizeEXT.y, 0, 1));
     area_int /= (area_int.w);
+    vec2 uv_v = vec2(0);
     const float cam_area = abs(area_int.x * area_int.y);
     bool specular = false;
     vec3 throughput = vec3(1);
@@ -67,13 +68,13 @@ void main() {
             break;
         }
         if (!found_isect) {
-            const vec3 val = throughput * pc_ray.sky_col;
+            /*const vec3 val = throughput * pc_ray.sky_col;
             if(depth <= 1) {
                 col += t0 * val;
             } else {
                 L_o += t0 * val;
             }
-         
+            */
             break;
         }
 
@@ -105,11 +106,11 @@ void main() {
             n_s = shading_nrm;
         }
         if ((hit_mat.bsdf_props & BSDF_SPECULAR) == 0) {
-            const float light_pick_pdf = 1. / pc_ray.light_triangle_count;
+            //moved to sample_area_light
+            //const float light_pick_pdf = 1. / pc_ray.light_triangle_count;
             const vec3 val = throughput *
                              uniform_sample_light(hit_mat, payload.pos, side,
-                                                  shading_nrm, wo, specular) /
-                             light_pick_pdf;
+                                                  shading_nrm, wo, specular);
             if (depth > 0) {
                 L_o += val;
             } else {
@@ -133,6 +134,7 @@ void main() {
             mat_idx = payload.material_idx;
             bsdf_props = hit_mat.bsdf_props;
             ray_depth = payload.dist;
+            uv_v = payload.uv;
         }
         
         //throughput *= f * abs(cos_theta) / pdf;
@@ -168,6 +170,7 @@ void main() {
     samples.d[pixel_idx].mat_idx = mat_idx;
     samples.d[pixel_idx].bsdf_props = bsdf_props;
     samples.d[pixel_idx].depth_v = ray_depth;
+    samples.d[pixel_idx].uv_v = uv_v;
     
     //tmp_col.d[pixel_idx] += L_o;
 }

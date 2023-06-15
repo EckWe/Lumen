@@ -12,6 +12,7 @@
 layout(push_constant) uniform _PushConstantRay { PushConstantRay pc_ray; };
 layout(buffer_reference, scalar) buffer RestirSamples { ReservoirSample d[]; };
 layout(buffer_reference, scalar) buffer Reservoirs { Reservoir d[]; };
+layout(buffer_reference, scalar) buffer ColorStorages { vec3 d[]; };
 const uint flags = gl_RayFlagsOpaqueEXT;
 const float tmin = 0.001;
 const float tmax = 10000.0;
@@ -28,6 +29,7 @@ RestirSamples samples = RestirSamples(scene_desc.restir_samples_addr);
 RestirSamples old_samples = RestirSamples(scene_desc.restir_samples_old_addr);
 Reservoirs temp_reservoirs = Reservoirs(scene_desc.temporal_reservoir_addr);
 Reservoirs spatial_reservoirs = Reservoirs(scene_desc.spatial_reservoir_addr);
+ColorStorages tmp_col = ColorStorages(scene_desc.color_storage_addr);
 void init_s(out ReservoirSample s) {
     s.x_v = vec3(0);
     s.n_v = vec3(0);
@@ -101,7 +103,7 @@ float target_function(in vec3 radiance, in vec3 sample_pos, in vec3 pos, in vec3
     if(eval_visibility(pos, sample_pos, false) == false) {
         L_connect = vec3(0);
         return 0.f;
-    }
+    } 
 
     const vec3 direction_sample = normalize(sample_pos - pos);
     const float cosine_factor = abs(dot(direction_sample, normal));
@@ -134,7 +136,7 @@ uint offset(const uint pingpong) {
 
 bool similar_projection(float view_depth, float view_depth_prev) {
     
-    return view_depth / view_depth_prev > 0.98f;
+    return true;//view_depth / view_depth_prev > 0.98f;
 }
 
 bool similar_spatial(vec3 normal, vec3 neighbor_normal, float depth, float neighbor_depth) {
@@ -158,108 +160,121 @@ bool similar(ReservoirSample q, ReservoirSample q_n) {
     return true;
 }
 
-vec3 resample_sbdpt_gi() {
+float jacobian(in vec3 reservoir_x_s, in vec3 reservoir_x_v, in vec3 sample_x_v, in vec3 reservoir_n_s) {
 
-    const vec2 pixel = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+    vec3 connectB = reservoir_x_s - reservoir_x_v;
+    vec3 connectA = reservoir_x_s - sample_x_v;
+
+    float square_mag_B = dot(connectB, connectB);
+    float square_mag_A = dot(connectA, connectA);
+    connectB = normalize(connectB);
+    connectA = normalize(connectA);
+    float cosPhiA = -dot(connectA, reservoir_n_s);
+    float cosPhiB = -dot(connectB, reservoir_n_s);
+
+    float jacobian = (square_mag_A * cosPhiB) <= 0.f ? 0.f : square_mag_B * cosPhiA / (square_mag_A * cosPhiB);
+    
+
+    return 1;
+    //return jacobian;
+}
+
+
+vec3 spatial_resample_sbdpt_gi() {
+
+
     const ReservoirSample s = samples.d[pixel_idx];
 
     // if no first hit, then no continuation of eye path
     if (s.mat_idx == -1) {
         return vec3(0);
     }
+    vec3 camera_hit_position = s.x_v;
 
-    Reservoir r;
-    uint prev_coords_idx = pixel_idx;
-    ivec2 prev_coords;
-    bool reprojection_failed = true;
+    Reservoir spatial_reservoir = temp_reservoirs.d[pixel_idx + pixels - ping_pong_offset];
+
+    init_reservoir(spatial_reservoir, s);
+
+    int spatial_iterations = 5;
+
+    float search_radius = 100.f/length(camera_hit_position - ubo.view_pos.xyz);
     
-    if (pc_ray.do_spatiotemporal == 0) {
-        init_reservoir(r, s);
-    } else {
-        vec4 prev_pos = ubo.prev_view * vec4(s.x_v, 1.f);
-        prev_pos /= prev_pos.z;
-        prev_pos = -ubo.prev_projection * prev_pos;
-        const vec2 prev_ndc = prev_pos.xy;
-        prev_coords = ivec2(0.5f * (1.f + prev_ndc) * gl_LaunchSizeEXT.xy);
+    const float radius_shrink_ratio = 0.5f;
+    const float min_search_radius = 20.f;
+    search_radius = max(min_search_radius, search_radius);
+    const float starting_radius = search_radius;
 
-        if (prev_coords.x >= 0 && prev_coords.x < gl_LaunchSizeEXT.x &&
-            prev_coords.y >= 0 && prev_coords.y < gl_LaunchSizeEXT.y) {
-            prev_coords_idx = prev_coords.x * gl_LaunchSizeEXT.y + prev_coords.y;
-            
-                reprojection_failed = false;
-        }
+    const float min_adaptive = 3.f;
 
-        bool reprojection_failed = true;
-        uint prev_coords_idx;
-        if (prev_coords.x >= 0 && prev_coords.x < gl_LaunchSizeEXT.x &&
-            prev_coords.y >= 0 && prev_coords.y < gl_LaunchSizeEXT.y) {
-            
-            prev_coords_idx = prev_coords.x * gl_LaunchSizeEXT.y + prev_coords.y;
-            reprojection_failed = false;
-            
-        }
-        if (!reprojection_failed) {
-            Reservoir temp_reservoir = temp_reservoirs.d[ping_pong_offset + prev_coords_idx];
-            if (similar_projection(length(s.x_v - ubo.view_pos.xyz), length(temp_reservoir.s.x_v - ubo.prev_view_pos.xyz))) {
-                r = temp_reservoir;
-            } else {
-                init_reservoir(r, s);
-            }
-            
+    float w_sum_spatial = 0.f;
+    float final_target_function = 0.f;
+    vec3 final_connected = vec3(0);
+    int merged_count = 0;
+    vec3 merged_col = vec3(0);
+
+    Reservoir neighbor_reservoir;
+
+    for (int i = 0; i < spatial_iterations; i++) {
+        const vec2 radius_offset = (vec2(rand(seed), rand(seed)) * 2.f - 1.f) * search_radius;
+        ivec2 neighbor_pixel = ivec2(gl_LaunchIDEXT.xy + radius_offset);
+        
+        const ivec2 boundary = ivec2(gl_LaunchSizeEXT.xy) - 1;
+        neighbor_pixel.x = neighbor_pixel.x < 0 ? -neighbor_pixel.x : (neighbor_pixel.x > boundary.x ? boundary.x - (neighbor_pixel.x - boundary.x) : neighbor_pixel.x);
+        neighbor_pixel.y = neighbor_pixel.y < 0 ? -neighbor_pixel.y : (neighbor_pixel.y > boundary.y ? boundary.y - (neighbor_pixel.y - boundary.y) : neighbor_pixel.y);
+        
+        const uint neighbor_idx = neighbor_pixel.x * gl_LaunchSizeEXT.y + neighbor_pixel.y;
+
+        if(neighbor_idx <= pixels) {
+            neighbor_reservoir = temp_reservoirs.d[neighbor_idx + pixels - ping_pong_offset];//spatial_reservoirs.d[prev_pingpong_offset + pixel_idx];
         } else {
-            init_reservoir(r, s);
+            search_radius = max(min_adaptive, search_radius * radius_shrink_ratio);
+            continue; 
         }
+
+        float depth_current = length(spatial_reservoir.s.x_v - ubo.view_pos.xyz);
+        float depth_neighbor = length(neighbor_reservoir.s.x_v - ubo.view_pos.xyz);
+
+        if (!similar_spatial(spatial_reservoir.s.n_v, neighbor_reservoir.s.n_v, depth_current, depth_neighbor) || neighbor_reservoir.m <= 0) {
+            // clears up object edges
+            if (spatial_iterations < 10) {
+                spatial_iterations++;
+                search_radius = max(min_adaptive, search_radius * radius_shrink_ratio);
+            }
+            continue;
+        }
+        vec3 spatial_connected = vec3(0);
+
+        vec3 temp_dir = normalize(neighbor_reservoir.s.x_s - s.x_v);
+        float adjusted_pdf;
+        vec3 f_adjusted = eval_bsdf(s.n_v, -temp_dir, load_material(s.mat_idx, s.uv_v), 0, false, temp_dir, adjusted_pdf, 0);
+
+        //Jacobian here
+        float jacobian = jacobian(neighbor_reservoir.s.x_s, neighbor_reservoir.s.x_v, s.x_v, neighbor_reservoir.s.n_s);
+        float connect_tf = target_function(neighbor_reservoir.s.L_o, neighbor_reservoir.s.x_s, s.x_v, s.n_v, s.f, spatial_connected) * jacobian;
+        float wi_neighbor = connect_tf * neighbor_reservoir.W * neighbor_reservoir.m;
+
+        bool merged = merge_reservoir(spatial_reservoir, neighbor_reservoir, wi_neighbor, w_sum_spatial);
+        if (merged) {
+            final_target_function = connect_tf;
+            final_connected = spatial_connected;
+            // Reduces color noise
+            /*merged_count++;
+            float temp_w_sum = w_sum_spatial;
+            temp_w_sum /= spatial_reservoir.m;
+            float temp_W = temp_w_sum / connect_tf;
+            merged_col += spatial_connected * temp_W;*/
+        }
+        search_radius = max(starting_radius, search_radius / radius_shrink_ratio);
+
     }
+    w_sum_spatial /= spatial_reservoir.m;
+    spatial_reservoir.m = min(spatial_reservoir.m, M_MAX_S);
 
+    spatial_reservoir.W = w_sum_spatial / final_target_function;
 
-    vec3 sample_connected = vec3(0);
-    float sample_tf = target_function(s.L_o, s.x_s, s.x_v, s.n_v, s.f, sample_connected);
-    float wi = sample_tf / s.p_q;
-   
-    vec3 temp_dir = normalize(r.s.x_s - s.x_v);
-    float adjusted_pdf;
-    vec3 f_adjusted = eval_bsdf(s.n_v, -temp_dir, load_material(s.mat_idx, s.uv_v), 0, false, temp_dir, adjusted_pdf, 0);
-    
-    float jacobian = 1.f;
-
-    vec3 connectB = r.s.x_s - r.s.x_v;
-    vec3 connectA = r.s.x_s - s.x_v;
-
-    float square_mag_B = dot(connectB, connectB);
-    float square_mag_A = dot(connectA, connectA);
-    connectB = normalize(connectB);
-    connectA = normalize(connectA);
-    float cosA = dot(s.n_v, connectA);
-    float cosB = dot(r.s.n_v, connectB);
-    float cosPhiA = -dot(connectA, r.s.n_s);
-    float cosPhiB = -dot(connectB, r.s.n_s);
-
-    if (cosA <= 0.f || cosPhiA <= 0.f || square_mag_A <= 0.f || square_mag_B <= 0.f || cosB <= 0.f || cosPhiB <= 0.f) {
-        jacobian = 0.f;
-    }
-    jacobian = (square_mag_A * cosPhiB) <= 0.f ? 0.f : square_mag_B * cosPhiA / (square_mag_A * cosPhiB);
-
-    vec3 temporal_connected = vec3(0);
-    float temporal_tf = target_function(r.s.L_o, r.s.x_s, s.x_v, s.n_v, f_adjusted, temporal_connected) * jacobian;
-    //float temporal_tf = target_function(r.s.L_o, r.s.x_s, s.x_v, s.n_v, s.f, temporal_connected) * jacobian;
-
-    float w_sum = temporal_tf * r.W * r.m;
-
-    bool updated = update_reservoir(r, w_sum, s, wi);
-
-    w_sum /= r.m;
-    r.m = min(r.m, M_MAX);
-    float current_tf = updated ? sample_tf : temporal_tf;
-    vec3 current_sample = updated ? sample_connected : temporal_connected;
-    //vec3 current_sample = vec3(0);
-    //float current_tf = target_function(r.s.L_o, r.s.x_s, s.x_v, s.n_v, s.f, current_sample);
-
-    r.W = current_tf <= 0.f ? 0.f : w_sum / current_tf;
-    temp_reservoirs.d[pixel_idx + pixels - ping_pong_offset] = r;
-
-    //return sample_connected/ s.p_q;
-    return current_sample * r.W;
-    //return vec3(test);
+    vec3 result = final_connected * spatial_reservoir.W;
+    //vec3 result = merged_col / merged_count;
+    return result;
 }
 
 
@@ -268,10 +283,19 @@ vec3 resample_sbdpt_gi() {
 void main() {
     
 
-    vec3 col = resample_sbdpt_gi();
+    vec3 col = spatial_resample_sbdpt_gi();
+    vec3 splat_img = tmp_col.d[pixel_idx];
+    // lpr
+    col += splat_img;
+    tmp_col.d[pixel_idx] = vec3(0);
+    //vec3 col = vec3(1);
     //col = vec3(col.x, 0, 0);
     //vec3 old_col = imageLoad(image, ivec2(gl_LaunchIDEXT.xy)).xyz;
-    //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
+    if (isnan(luminance(col))) {
+        col = vec3(0);
+    }
+
+    imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
     
     /*if (pc_ray.frame_num > 1) {
         float w = 1. / float(pc_ray.frame_num);
@@ -281,7 +305,4 @@ void main() {
     } else {
         imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
     }*/
-
-
-    
 }

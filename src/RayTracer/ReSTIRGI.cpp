@@ -124,9 +124,28 @@ void ReSTIRGI::render() {
 		.bind(mesh_lights_buffer)
 		.bind_texture_array(diffuse_textures)
 		.bind_tlas(instance->vkb.tlas);
-
+	 instance->vkb.rg
+		->add_rt("SBDPT - GI Spatial Resampling",
+				 {.shaders = {{"src/shaders/integrators/sbdpt/sbdpt_gi_spatial_reuse.rgen"},
+							  {"src/shaders/ray.rmiss"},
+							  {"src/shaders/ray_shadow.rmiss"},
+							  {"src/shaders/ray.rchit"},
+							  {"src/shaders/ray.rahit"}},
+				  .dims = {instance->width, instance->height},
+				  .accel = instance->vkb.tlas.accel})
+		.push_constants(&pc_ray)
+		.bind({
+			output_tex,
+			prim_lookup_buffer,
+			scene_ubo_buffer,
+			scene_desc_buffer,
+		})
+		//.bind_texture_array(diffuse_textures)
+		.bind(mesh_lights_buffer)
+		.bind_texture_array(diffuse_textures)
+		.bind_tlas(instance->vkb.tlas);
 	// Spatial reuse
-	 /* instance->vkb.rg
+	/* instance->vkb.rg
 		->add_rt("ReSTIRGI - Spatial Reuse", {.shaders = {{"src/shaders/integrators/restir/gi/spatial_reuse.rgen"},
 														  {"src/shaders/ray.rmiss"},
 														  {"src/shaders/ray_shadow.rmiss"},

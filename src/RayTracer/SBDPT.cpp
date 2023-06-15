@@ -143,10 +143,10 @@ void SBDPT::render() {
 	} else {
 		prepare_pass.skip_execution();
 	}*/
-#define TEMP_RESAMPLING
-#define SPATIAL_RESAMPLING
-//#define LIGHT_PATH_RESAMPLING
-//#define GI_RESAMPLING
+//#define TEMP_RESAMPLING
+//#define SPATIAL_RESAMPLING
+#define LIGHT_PATH_RESAMPLING
+#define GI_RESAMPLING
 #ifdef TEMP_RESAMPLING
 	instance->vkb.rg
 		->add_rt("SBDPT - Init",
@@ -223,6 +223,27 @@ void SBDPT::render() {
 		.bind(mesh_lights_buffer)
 		.bind_texture_array(diffuse_textures)
 		.bind_tlas(instance->vkb.tlas);
+
+	   instance->vkb.rg
+		   ->add_rt("SBDPT - Trace Eye", {.shaders = {{"src/shaders/integrators/sbdpt/sbdpt_eye.rgen"},
+													  {"src/shaders/ray.rmiss"},
+													  {"src/shaders/ray_shadow.rmiss"},
+													  {"src/shaders/ray.rchit"},
+													  {"src/shaders/ray.rahit"}},
+										  .dims = {instance->width, instance->height},
+										  .accel = instance->vkb.tlas.accel})
+		   .push_constants(&pc_ray)
+		   .bind({
+			   output_tex,
+			   prim_lookup_buffer,
+			   scene_ubo_buffer,
+			   scene_desc_buffer,
+		   })
+		   //.bind_texture_array(diffuse_textures)
+		   .bind(mesh_lights_buffer)
+		   .bind_texture_array(diffuse_textures)
+		   .bind_tlas(instance->vkb.tlas);
+
 #ifdef LIGHT_PATH_RESAMPLING
 	  instance->vkb.rg
 		  ->add_rt("SBDPT - Light Path Resampling",
@@ -248,7 +269,7 @@ void SBDPT::render() {
 		  .bind(mesh_lights_buffer)
 		  .bind_texture_array(diffuse_textures)
 		  .bind_tlas(instance->vkb.tlas);
-	  instance->vkb.rg
+	   /* instance->vkb.rg
 		  ->add_rt("SBDPT - Light Path Resampling Spatial",
 				   {
 
@@ -271,10 +292,10 @@ void SBDPT::render() {
 		  })
 		  .bind(mesh_lights_buffer)
 		  .bind_texture_array(diffuse_textures)
-		  .bind_tlas(instance->vkb.tlas);
+		  .bind_tlas(instance->vkb.tlas);*/
 #endif
 	//.finalize();
-	   instance->vkb.rg
+	  /* instance->vkb.rg
 		->add_rt("SBDPT - Trace Eye", {.shaders = {{"src/shaders/integrators/sbdpt/sbdpt_eye.rgen"},
 												 {"src/shaders/ray.rmiss"},
 												 {"src/shaders/ray_shadow.rmiss"},
@@ -292,7 +313,7 @@ void SBDPT::render() {
 		//.bind_texture_array(diffuse_textures)
 		.bind(mesh_lights_buffer)
 		.bind_texture_array(diffuse_textures)
-		.bind_tlas(instance->vkb.tlas);
+		.bind_tlas(instance->vkb.tlas);*/
 
 #ifdef GI_RESAMPLING
 	  instance->vkb.rg
@@ -303,6 +324,25 @@ void SBDPT::render() {
 													 {"src/shaders/ray.rahit"}},
 										 .dims = {instance->width, instance->height},
 										 .accel = instance->vkb.tlas.accel})
+		  .push_constants(&pc_ray)
+		  .bind({
+			  output_tex,
+			  prim_lookup_buffer,
+			  scene_ubo_buffer,
+			  scene_desc_buffer,
+		  })
+		  //.bind_texture_array(diffuse_textures)
+		  .bind(mesh_lights_buffer)
+		  .bind_texture_array(diffuse_textures)
+		  .bind_tlas(instance->vkb.tlas);
+		instance->vkb.rg
+		  ->add_rt("SBDPT - GI Spatial Resampling", {.shaders = {{"src/shaders/integrators/sbdpt/sbdpt_gi_spatial_reuse.rgen"},
+														 {"src/shaders/ray.rmiss"},
+														 {"src/shaders/ray_shadow.rmiss"},
+														 {"src/shaders/ray.rchit"},
+														 {"src/shaders/ray.rahit"}},
+											 .dims = {instance->width, instance->height},
+											 .accel = instance->vkb.tlas.accel})
 		  .push_constants(&pc_ray)
 		  .bind({
 			  output_tex,

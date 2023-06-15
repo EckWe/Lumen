@@ -265,8 +265,8 @@ vec3 vcm_connect_light_vertices(uint light_path_len, in uint light_path_idx,
         
         uint s = light_vtx(light_path_idx + i).path_len;
         uint mdepth = s + depth - 1;
-        // TODO this should not be +2, adjust path resampling to maximum path length
-        if (mdepth >= pc_ray.max_depth+2) {
+        
+        if (mdepth >= pc_ray.max_depth + 1) {
             break;
         }
         vec3 dir = light_vtx(light_path_idx + i).pos - payload.pos;
@@ -956,7 +956,7 @@ void fill_light(vec3 origin, VCMState vcm_state, bool finite_light,
                 uint idx = coords.x * gl_LaunchSizeEXT.y +
                         coords.y;
                     
-                tmp_col.d[idx] += splat_col;
+                //tmp_col.d[idx] += splat_col;
             }
 //#endif
         }
@@ -1033,6 +1033,10 @@ vec3 vcm_trace_eye(VCMState camera_state, float eta_vcm, float eta_vc,
     const float normalization_factor = 1. / (PI * radius_sqr * screen_size);
 
     for (depth = 1;; depth++) {
+        //if(depth == 2) {
+          //  break;
+        //}
+
         traceRayEXT(tlas, flags, 0xFF, 0, 0, 0, camera_state.pos, tmin,
                     camera_state.wi, tmax, 0);
         
@@ -1071,9 +1075,12 @@ vec3 vcm_trace_eye(VCMState camera_state, float eta_vcm, float eta_vc,
         camera_state.d_vm /= cos_wo;
         // Get the radiance
         if (luminance(mat.emissive_factor) > 0) {
-            //if(depth > 1)
-               // col += camera_state.throughput *
-                 //  vcm_get_light_radiance(mat, camera_state, depth);
+
+
+            if (depth > 1)
+                col += camera_state.throughput * vcm_get_light_radiance(mat, camera_state, depth);
+
+
              if (pc_ray.use_vc == 1 || pc_ray.use_vm == 1) {
                   break;
             }
@@ -1083,24 +1090,23 @@ vec3 vcm_trace_eye(VCMState camera_state, float eta_vcm, float eta_vc,
         float pdf_rev;
         vec3 f;
         if (!mat_specular && depth < pc_ray.max_depth) {
-			//if (depth >1)
-            //col += vcm_connect_light(n_s, wo, mat, side, eta_vm, camera_state,
-              //                   pdf_rev, f);
-            //vcm_connect_light(n_s, wo, mat, side, eta_vm, camera_state,
-              //                       pdf_rev, f);
+			if (depth > 1)
+                col += vcm_connect_light(n_s, wo, mat, side, eta_vm, camera_state,
+                                 pdf_rev, f);
+            
         }
         
         // Connect to light vertices
         if (!mat_specular) {
 
-            
-            vec3 connect = vcm_connect_light_vertices(light_path_len, light_path_idx,
+            //if(depth == 1) {
+                vec3 connect = vcm_connect_light_vertices(light_path_len, light_path_idx,
                                               depth, n_s, wo, mat, side, eta_vm,
                                               camera_state, pdf_rev);
-            if(depth == 1) {
+            
                 col += connect;
                 //col = vec3(1,1,1);
-            }
+            //}
                 
         }
         

@@ -371,6 +371,7 @@
     <None Include="src\shaders\integrators\sbdpt\init_spawn_reservoirs.comp" />
     <None Include="src\shaders\integrators\sbdpt\sbdpt.rgen" />
     <None Include="src\shaders\integrators\sbdpt\sbdpt_eye.rgen" />
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_gi_spatial_reuse.rgen" />
     <None Include="src\shaders\integrators\sbdpt\sbdpt_gi_temporal_reuse.rgen" />
     <None Include="src\shaders\integrators\sbdpt\sbdpt_light.rgen" />
     <None Include="src\shaders\integrators\sbdpt\sbdpt_light_first.rgen" />

@@ -511,7 +511,7 @@ void LumenScene::load_scene(const std::string& path) {
 		compute_scene_dimensions();
 		// Light
 		// TODO complete, only directional light here???
-		#define ONLY_ENV 
+		//#define ONLY_ENV 
 		#ifndef ONLY_ENV
 		i = 0;
 		lights.resize(mitsuba_parser.lights.size());

@@ -188,7 +188,7 @@ float target_function(in VCMVertex light_vertex, in vec3 cam_hit_pos, in vec3 ca
             }
 
             if (visible) {
-                float mis_weight = 1. / (1 + w_light + w_camera);
+                float mis_weight =  1. / (1 + w_light + w_camera);
                 L_connect = mis_weight * G * camera_state.throughput * f_cam * (light_vertex.throughput*light_vertex.pdf_emit)* f_light;
                 result = luminance(L_connect);
             }
@@ -249,6 +249,7 @@ float target_function_path(in vec3 cam_hit_pos, in vec3 cam_hit_normal, in vec3 
         
         L_connect_path += L_connect;   
     }
+    //result = luminance(L_connect_path);
     return result;
 }
 
@@ -412,12 +413,12 @@ vec3 resample_light_path(VCMState camera_state) {
 
     // adjust throughput of resampled vertices
     for(int i = 0; i < lpr.path_vertex_count; i++) {
-        light_vtx(i) = light_vertices_reservoirs.d[i+(pixel_idx+pixels - ping_pong_offset)*path_length_factor];
-        light_vtx(i).throughput *= lpr.W * light_vtx(i).pdf_emit;
+        //light_vtx(i) = light_vertices_reservoirs.d[i+(pixel_idx+pixels - ping_pong_offset)*path_length_factor];
+        //light_vtx(i).throughput *= lpr.W * light_vtx(i).pdf_emit;
     }
-    light_path_cnts.d[pixel_idx] = lpr.path_vertex_count;
-    //target_function_path(camera_hit_position, n_s, wo, mat, camera_state, L_connect_path, true, true, lpr.path_vertex_count);
-    //target_function_path_W_test(camera_hit_position, n_s, wo, mat, camera_state, L_connect_path, true, true, lpr.path_vertex_count, lpr.W);
+    //light_path_cnts.d[pixel_idx] = lpr.path_vertex_count;
+
+    
 
     vec3 result = L_connect_path * lpr.W; //* reservoir_light_vtx(0).pdf_emit;//* lpr.W;
     //vec3 result = first_test; //* light_vtx(0).pdf_emit;
@@ -464,6 +465,9 @@ void main() {
 
 
     col = resample_light_path(camera_state);
+
+    tmp_col.d[pixel_idx] += col;
+
     //col = vec3(1,0,0);
     //imageStore(image, ivec2(gl_LaunchIDEXT.xy), vec4(col, 1.f));
     /*if (pc_ray.frame_num > 1) {

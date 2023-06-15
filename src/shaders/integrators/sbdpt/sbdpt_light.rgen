@@ -401,7 +401,7 @@ void main() {
     //fill_light_with_lighthit_resampling(origin.xyz, vcm_state, finite, eta_vcm, eta_vc, eta_vm, camera_state, pdf_emit, pdf_pos);
     //vec3 col =*/
 
-#define TEMP_RESAMPLING
+//#define TEMP_RESAMPLING
 #ifdef TEMP_RESAMPLING
     LightTransferState lts = light_transfer_states.d[pixel_idx];
     vcm_state.wi = lts.wi;

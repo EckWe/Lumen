@@ -1,0 +1,58 @@
+{
+    "integrator" : {
+        "type" : "sbdpt",
+		"enable_vm" : 0,
+        "radius_factor" : 0.025,
+        "path_length" : 6,
+        "sky_col" : [
+            0,0,0
+        ]
+
+    },
+
+    "bsdfs": [
+        {
+            
+            "name": "House",
+            "refs": [
+                "Mesh047"
+            ],
+            "albedo": [
+                1,
+                1,
+                1
+            ],
+            "type": "diffuse"
+        },
+		{	
+			"emissive_factor": [
+                100,
+                100,
+                100
+            ],
+            "albedo": [
+                1,
+                1,
+                1
+            ],
+            "name": "Light",
+            "refs": [
+                "Cube"
+            ],
+            "type": "diffuse"
+        }
+       
+    ],
+    "camera": {
+        "fov": 45,
+        "position": [
+            -0.66,
+            5.06,
+            -6.75
+        ],
+        "dir" : [
+            0,0.5, -1
+        ]
+    },
+    "mesh_file": "house.obj"
+}

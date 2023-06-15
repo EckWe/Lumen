@@ -370,7 +370,7 @@ vec3 resample_light_hit(in VCMState camera_state, inout VCMState light_first_hit
 
 
     w_sum /= lhr.M;
-    lhr.M = min(lhr.M, 100);
+    lhr.M = min(lhr.M, 60);
     //float current_tf = luminance(lhr.light_hit_sample.L_connect) * lhr.light_hit_sample.mis_weight;
     ts = lhr.light_hit_sample;
     
@@ -393,8 +393,8 @@ vec3 resample_light_hit(in VCMState camera_state, inout VCMState light_first_hit
 #ifndef SPATIAL_RESAMPLING
 
     float final_sampling_pdf = 1.f / lhr.W;
-    float non_resample_chance = 0.15f;
-    /*if (L_connect_complete == 0) {
+    /*float non_resample_chance = 0.2f;
+    if (L_connect_complete == 0) {
         if (rand(seed) < non_resample_chance) {
             final_sampling_pdf = light_hit_sample.sampling_pdf_emit * non_resample_chance;
         } else {

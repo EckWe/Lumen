@@ -1,6 +1,6 @@
 {
     "integrator" : {
-        "type" : "sbdpt",
+        "type" : "restirgi",
 		"enable_vm" : 0,
         "radius_factor" : 0.025,
         "path_length" : 6,
@@ -13,9 +13,14 @@
     "bsdfs": [
         {
             
-            "name": "Glass",
+            "name": "Door",
             "refs": [
-                "glass"
+                "Door",
+				"DoorMetal",
+				"PictureFrame",
+				"Room",
+				"Table",
+				"Teapot"
             ],
             "albedo": [
                 1,
@@ -24,12 +29,16 @@
             ],
             "type": "diffuse"
         },
-        {
-            "name": "Ring",
-			"texture": "wood2.jpg",
+		{
+            
+            "name": "Wood",
             "refs": [
-                "ring"
+                "Door",
+				
+				"Table"
+				
             ],
+			"texture": "wood.jpg",
             "albedo": [
                 1,
                 1,
@@ -37,48 +46,52 @@
             ],
             "type": "diffuse"
         },
-       
-        {
-            "albedo": [
-                1,
-                1,
-                1
-            ],
-            "name": "Other Walls",
+		{
+            
+            "name": "Frames",
             "refs": [
-                "left_wall",
-                "right_wall",
-                "ceiling",
-                "back_wall",
-				"cube",
-				"front_wall"
+                
+				"DoorFrame",
+				
+				"PictureFrame"
+				
+            ],
+			"texture": "cherry-wood-texture.jpg",
+            "albedo": [
+                0.9,
+                0.9,
+                0.9
             ],
             "type": "diffuse"
         },
-
-        {
+		{
+            
+            "name": "Picture",
+            "refs": [
+				"Picture"
+            ],
+			"texture": "landscape-with-a-lake.jpg",
             "albedo": [
                 1,
                 1,
                 1
-            ],
-            "name": "Table",
-			
-            "refs": [
-               "table" 
             ],
             "type": "diffuse"
         },
-
-        {
+		{	
+			"emissive_factor": [
+                300,
+                300,
+                300
+            ],
             "albedo": [
                 1,
                 1,
                 1
             ],
-            "name": "Floor",
+            "name": "Light",
             "refs": [
-                "floor"
+                "Cube"
             ],
             "type": "diffuse"
         }
@@ -87,14 +100,13 @@
     "camera": {
         "fov": 45,
         "position": [
-            -2.58,
-            -1.16,
-            3.78
+            2,
+            1.4,
+            -2
         ],
         "dir" : [
-            1.5,0, 1
+            -4,0, 1
         ]
     },
-    "mesh_file": "test.obj",
-	"environment_texture": "env_tex_sky.hdr"
+    "mesh_file": "ajar_scene.obj"
 }

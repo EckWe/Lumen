@@ -581,6 +581,9 @@
     <None Include="src\shaders\integrators\sbdpt\sbdpt_gi_temporal_reuse.rgen">
       <Filter>Shaders\SBDPT</Filter>
     </None>
+    <None Include="src\shaders\integrators\sbdpt\sbdpt_gi_spatial_reuse.rgen">
+      <Filter>Shaders\SBDPT</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Framework">

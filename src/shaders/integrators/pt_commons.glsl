@@ -113,8 +113,8 @@ bool path_trace(inout vec3 throughput, inout bool specular, inout vec3 direction
 
 	if (!found_isect) {
 		vec2 uv = dir_to_latlong(direction);
-		vec3 env_col = texture(scene_textures[pc_ray.num_textures], uv).xyz;
-		col += throughput * env_col;  // pc_ray.sky_col;
+		//vec3 env_col = texture(scene_textures[pc_ray.num_textures], uv).xyz;
+		//col += throughput * env_col;  // pc_ray.sky_col;
 
 		return false;
 	}
@@ -138,9 +138,10 @@ bool path_trace(inout vec3 throughput, inout bool specular, inout vec3 direction
     
 
 	if ((hit_mat.bsdf_props & BSDF_SPECULAR) == 0) {
-		const float light_pick_pdf = 1. / pc_ray.light_triangle_count;
-		//if (depth > 0)
-		col += throughput * uniform_sample_light(hit_mat, payload.pos, side, n_s, wo, specular) / light_pick_pdf;
+		//const float light_pick_pdf = 1. / pc_ray.light_triangle_count;
+		if (depth > 0)
+			col += throughput * uniform_sample_light(hit_mat, payload.pos, side, n_s, wo, specular);
+		// light_pick_pdf;
 		//col += throughput * sample_env_light(hit_mat, payload.pos, side, n_s, wo, specular);
 	}
 	// TODO test self intersection offset fix
